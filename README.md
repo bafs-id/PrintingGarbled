@@ -21,6 +21,22 @@ The `app/src/main/assets/` folder contains 6 test PDFs:
 | `1772172993599_250313201 - Fail.pdf`  | ❌ Garbled output   |
 | `1772173144558_250448540 - Fail.pdf`  | ❌ Garbled output   |
 
+## Print Results
+
+Photos of actual printed output are in the `Print Results/` folder:
+
+### ✅ Pass (Printed Correctly)
+
+| 1772170565703_250646575                                           | 1772172257369_250846099                                           | 1772172361576_250050845                                              |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------- |
+| ![Pass 1](Print%20Results/1772170565703_250646575%20-%20Pass.jpg) | ![Pass 2](Print%20Results/1772172257369_250846099%20-%20Pass.jpg) | ![Pass 3](Print%20Results/1772172361576_250050845%20%20-%20Pass.jpg) |
+
+### ❌ Fail (Garbled Output)
+
+| 1772172626834_250033423                                           | 1772172993599_250313201                                           | 1772173144558_250448540                                           |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- |
+| ![Fail 1](Print%20Results/1772172626834_250033423%20-%20Fail.jpg) | ![Fail 2](Print%20Results/1772172993599_250313201%20-%20Fail.jpg) | ![Fail 3](Print%20Results/1772173144558_250448540%20-%20Fail.jpg) |
+
 ## Project Setup & Run Instructions
 
 ### Prerequisites
@@ -119,10 +135,24 @@ printPDFbyFile(file, 0, 0, 200) → Print PDF
 closeport(500)                  → Disconnect
 ```
 
+## Printer Configuration
+
+The printer configuration file used during testing is included in the project root:
+
+```
+TSC_Alpha_40L_Configuration.dcf
+```
+
+This `.dcf` file contains the TSC Alpha-40L settings used to reproduce the issue.
+
 ## Project Structure
 
 ```
 PrintingGarbled/
+├── TSC_Alpha_40L_Configuration.dcf  ← Printer configuration
+├── Print Results/                   ← Photos of actual printed output
+│   ├── *Pass.jpg                    ← Correct prints
+│   └── *Fail.jpg                    ← Garbled prints
 ├── app/
 │   ├── libs/
 │   │   └── tscsdk.jar              ← TSC Printer SDK
@@ -146,4 +176,5 @@ PrintingGarbled/
 - **Gradle:** 8.13 / **AGP:** 8.11.2
 - **TSC SDK:** `tscsdk.jar` (`com.example.tscdll.TSCActivity`)
 - **Printer:** TSC Alpha-40L
+- **Printer Config:** `TSC_Alpha_40L_Configuration.dcf`
 - **Connection:** Bluetooth Classic
