@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <EditText
+        android:id="@+id/etBluetoothAddress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Bluetooth MAC (e.g. 00:11:22:33:44:55)"
+        android:inputType="text"
+        android:text="34:81:F4:9C:9C:C0"
+        android:background="@drawable/border"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/btnCheckStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Check Status"
+        android:textSize="18sp"
+        android:layout_marginBottom="12dp" />
+
+    <Spinner
+        android:id="@+id/spinnerPdf"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@drawable/spinner_border"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btnPrintSelected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Print Selected"
+        android:textSize="18sp"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btnPrint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Print All"
+        android:textSize="18sp"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Status: Ready"
+        android:textSize="14sp"
+        android:gravity="center" />
+
+</LinearLayout>
