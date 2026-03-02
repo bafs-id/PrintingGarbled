@@ -16,7 +16,7 @@ The `app/src/main/assets/` folder contains 6 test PDFs:
 | ------------------------------------- | ------------------- |
 | `1772170565703_250646575 - Pass.pdf`  | ✅ Prints correctly |
 | `1772172257369_250846099 - Pass.pdf`  | ✅ Prints correctly |
-| `1772172361576_250050845  - Pass.pdf` | ✅ Prints correctly |
+| `1772172361576_250050845 - Pass.pdf`  | ✅ Prints correctly |
 | `1772172626834_250033423 - Fail.pdf`  | ❌ Garbled output   |
 | `1772172993599_250313201 - Fail.pdf`  | ❌ Garbled output   |
 | `1772173144558_250448540 - Fail.pdf`  | ❌ Garbled output   |
