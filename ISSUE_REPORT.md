@@ -15,6 +15,7 @@ We are experiencing a **garbled/corrupted printing** issue when printing PDF tic
 | Item               | Detail                                                       |
 | ------------------ | ------------------------------------------------------------ |
 | **Printer Model**  | TSC Alpha-40L                                                |
+| **Firmware**       | M2.00.008                                                    |
 | **Connection**     | Bluetooth                                                    |
 | **Software**       | TSC Printer SDK (provided by TSC)                            |
 | **Printer Config** | `TSC_Alpha_40L_Configuration.dcf` (included in project root) |

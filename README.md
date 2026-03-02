@@ -176,5 +176,6 @@ PrintingGarbled/
 - **Gradle:** 8.13 / **AGP:** 8.11.2
 - **TSC SDK:** `tscsdk.jar` (`com.example.tscdll.TSCActivity`)
 - **Printer:** TSC Alpha-40L
+- **Printer Firmware:** M2.00.008
 - **Printer Config:** `TSC_Alpha_40L_Configuration.dcf`
 - **Connection:** Bluetooth Classic
