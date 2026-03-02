@@ -1,8 +1,14 @@
 # Printing Issue Report — TSC Alpha-40L
 
+## About Us
+
+**Bangkok Aviation Fuel Services PCL (BAFS)** provides aircraft fueling services at airports. After each fueling operation is completed, the system generates a ticket (PDF) that must be printed on-site using a portable printer. Reliable and accurate ticket printing is essential to our daily operations.
+
+This report is submitted by the **BAFS software engineering team** responsible for developing the mobile application used in the field.
+
 ## Summary
 
-We are experiencing a **garbled/corrupted printing** issue when printing PDF documents to the **TSC Alpha-40L** printer via Bluetooth. Some PDF files print correctly while others produce unreadable output.
+We are experiencing a **garbled/corrupted printing** issue when printing PDF tickets to the **TSC Alpha-40L** printer via Bluetooth. Some PDF files print correctly while others produce unreadable output. This directly impacts our field operations, as garbled tickets require reprinting and cause delays.
 
 ## Printer & Connection Details
 
