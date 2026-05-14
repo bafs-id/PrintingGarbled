@@ -1,0 +1,4491 @@
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by FernFlower decompiler)
+//
+
+package com.example.tscdll;
+
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.Context;
+import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.Typeface;
+import android.graphics.Bitmap.Config;
+import android.graphics.Paint.Style;
+import android.graphics.pdf.PdfRenderer;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.ParcelFileDescriptor;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
+import android.text.Layout.Alignment;
+import android.util.Log;
+import android.view.Menu;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import ar.com.hjg.pngj.ImageInfo;
+import ar.com.hjg.pngj.ImageLineInt;
+import ar.com.hjg.pngj.PngWriter;
+import compression.lzss;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.UUID;
+
+public class TSCActivity extends Activity {
+    private static final String TAG = "THINBTCLIENT";
+    private static final boolean D = true;
+    private BluetoothAdapter mBluetoothAdapter = null;
+    private BluetoothSocket btSocket = null;
+    private OutputStream OutStream = null;
+    private InputStream InStream = null;
+    private byte[] buffer = new byte[1024];
+    private static byte[] readBuf = new byte[1024];
+    private String printerstatus = "";
+    public boolean IsConnected = false;
+    private int write_success = 0;
+    private int readlength = 0;
+    private String CRLF = "\r\n";
+    private static String receive_data = "";
+    private TextView test1;
+    private Button b1;
+    private Button b2;
+    private Button b3;
+    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static String address = "00:19:0E:A0:04:E1";
+
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        this.setContentView(2130903040);
+        String filePath = Environment.getExternalStorageDirectory().toString() + "/Download";
+        String fileName = "test.pdf";
+        new File(filePath, fileName);
+        this.test1 = (TextView)this.findViewById(2131230720);
+        this.b1 = (Button)this.findViewById(2131230721);
+        this.b2 = (Button)this.findViewById(2131230722);
+        this.b3 = (Button)this.findViewById(2131230723);
+        this.b1.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                TSCActivity.this.openport("00:19:0E:A0:94:5D");
+                String status = TSCActivity.this.printerstatus(300);
+                TSCActivity.this.closeport(2000);
+                byte[] var10000 = new byte[]{41, 41};
+            }
+        });
+        this.b2.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                TSCActivity.this.openport("00:0C:BF:12:13:E6", 100);
+                TSCActivity.this.NFC_Write_data("1234");
+                TSCActivity.this.closeport(700);
+            }
+        });
+        this.b3.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                TSCActivity.this.closeport(500);
+            }
+        });
+    }
+
+    public void onStart() {
+        super.onStart();
+        Log.e("THINBTCLIENT", "++ ON START ++");
+    }
+
+    public void onResume() {
+        super.onResume();
+        Log.e("THINBTCLIENT", "+ ON RESUME +");
+        Log.e("THINBTCLIENT", "+ ABOUT TO ATTEMPT CLIENT CONNECT +");
+    }
+
+    public void onPause() {
+        super.onPause();
+        Log.e("THINBTCLIENT", "- ON PAUSE -");
+        if (this.OutStream != null) {
+            try {
+                this.OutStream.flush();
+            } catch (IOException e) {
+                Log.e("THINBTCLIENT", "ON PAUSE: Couldn't flush output stream.", e);
+            }
+        }
+
+    }
+
+    public void onStop() {
+        super.onStop();
+        Log.e("THINBTCLIENT", "-- ON STOP --");
+    }
+
+    public void onDestroy() {
+        super.onDestroy();
+        Log.e("THINBTCLIENT", "--- ON DESTROY ---");
+    }
+
+    public boolean onCreateOptionsMenu(Menu menu) {
+        this.getMenuInflater().inflate(2131165184, menu);
+        return true;
+    }
+
+    public static String getHexString(byte[] b) throws Exception {
+        String result = "";
+
+        for(int i = 0; i < b.length; ++i) {
+            result = result + Integer.toString((b[i] & 255) + 256, 16).substring(1);
+        }
+
+        return result;
+    }
+
+    private void detect_bluetooth() {
+        Log.e("THINBTCLIENT", "Bluetooth not Enable");
+    }
+
+    public String openport(String address) {
+        BluetoothDevice device = null;
+        BluetoothAdapter mBluetoothAdapter = null;
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        InputStream tmpIn = null;
+        OutputStream tmpOut = null;
+        if (mBluetoothAdapter.isEnabled()) {
+            this.IsConnected = true;
+            device = mBluetoothAdapter.getRemoteDevice(address);
+
+            try {
+                this.btSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException var9) {
+                return "-1";
+            }
+
+            mBluetoothAdapter.cancelDiscovery();
+
+            try {
+                this.btSocket.connect();
+                this.OutStream = this.btSocket.getOutputStream();
+                this.InStream = this.btSocket.getInputStream();
+            } catch (IOException var8) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            this.detect_bluetooth();
+            this.IsConnected = false;
+            return "-1";
+        }
+    }
+
+    public String openport(String address, int delay) {
+        BluetoothDevice device = null;
+        BluetoothAdapter mBluetoothAdapter = null;
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        InputStream tmpIn = null;
+        OutputStream tmpOut = null;
+        if (mBluetoothAdapter.isEnabled()) {
+            this.IsConnected = true;
+            device = mBluetoothAdapter.getRemoteDevice(address);
+
+            try {
+                this.btSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException var10) {
+                return "-1";
+            }
+
+            mBluetoothAdapter.cancelDiscovery();
+
+            try {
+                this.btSocket.connect();
+                this.OutStream = this.btSocket.getOutputStream();
+                this.InStream = this.btSocket.getInputStream();
+            } catch (IOException var9) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            this.detect_bluetooth();
+            this.IsConnected = false;
+            return "-1";
+        }
+    }
+
+    public String openport_with_pair() {
+        String BTMAC = "";
+        BluetoothDevice device = null;
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        Iterator var6 = pairedDevices.iterator();
+        if (var6.hasNext()) {
+            BluetoothDevice device_detect = (BluetoothDevice)var6.next();
+            BTMAC = device_detect.getAddress();
+        }
+
+        InputStream tmpIn = null;
+        OutputStream tmpOut = null;
+        if (mBluetoothAdapter.isEnabled()) {
+            this.IsConnected = true;
+            device = mBluetoothAdapter.getRemoteDevice(BTMAC);
+
+            try {
+                this.btSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException var9) {
+                return "-1";
+            }
+
+            mBluetoothAdapter.cancelDiscovery();
+
+            try {
+                this.btSocket.connect();
+                this.OutStream = this.btSocket.getOutputStream();
+                this.InStream = this.btSocket.getInputStream();
+                return "1";
+            } catch (IOException var8) {
+                return "-1";
+            }
+        } else {
+            this.detect_bluetooth();
+            this.IsConnected = false;
+            return "-1";
+        }
+    }
+
+    public String openport_with_pair(int delay) {
+        String BTMAC = "";
+        BluetoothDevice device = null;
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        Iterator var7 = pairedDevices.iterator();
+        if (var7.hasNext()) {
+            BluetoothDevice device_detect = (BluetoothDevice)var7.next();
+            BTMAC = device_detect.getAddress();
+        }
+
+        InputStream tmpIn = null;
+        OutputStream tmpOut = null;
+        if (mBluetoothAdapter.isEnabled()) {
+            this.IsConnected = true;
+            device = mBluetoothAdapter.getRemoteDevice(BTMAC);
+
+            try {
+                this.btSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException var11) {
+                return "-1";
+            }
+
+            mBluetoothAdapter.cancelDiscovery();
+
+            try {
+                this.btSocket.connect();
+                this.OutStream = this.btSocket.getOutputStream();
+                this.InStream = this.btSocket.getInputStream();
+            } catch (IOException var10) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            this.detect_bluetooth();
+            this.IsConnected = false;
+            return "-1";
+        }
+    }
+
+    public String openport_onpair_btname(String btname) {
+        BluetoothAdapter mbtdapter = BluetoothAdapter.getDefaultAdapter();
+
+        for(BluetoothDevice device : mbtdapter.getBondedDevices()) {
+            if (btname.equals(device.getName())) {
+                this.openport(device.getAddress());
+            }
+        }
+
+        return "Not Found";
+    }
+
+    public String openport_onpair_btname(String btname, int delay) {
+        BluetoothAdapter mbtdapter = BluetoothAdapter.getDefaultAdapter();
+
+        for(BluetoothDevice device : mbtdapter.getBondedDevices()) {
+            if (btname.equals(device.getName())) {
+                this.openport(device.getAddress(), delay);
+            }
+        }
+
+        return "Not Found";
+    }
+
+    public String openport_without_security(String address) {
+        BluetoothDevice device = null;
+        BluetoothAdapter mBluetoothAdapter = null;
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        InputStream tmpIn = null;
+        OutputStream tmpOut = null;
+        if (mBluetoothAdapter.isEnabled()) {
+            this.IsConnected = true;
+            device = mBluetoothAdapter.getRemoteDevice(address);
+
+            try {
+                this.btSocket = device.createInsecureRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException var8) {
+                return "-1";
+            }
+
+            mBluetoothAdapter.cancelDiscovery();
+
+            try {
+                this.btSocket.connect();
+                this.OutStream = this.btSocket.getOutputStream();
+                this.InStream = this.btSocket.getInputStream();
+                return "1";
+            } catch (IOException var7) {
+                return "-1";
+            }
+        } else {
+            this.detect_bluetooth();
+            this.IsConnected = false;
+            return "-1";
+        }
+    }
+
+    public String openport_without_security(String address, int delay) {
+        BluetoothDevice device = null;
+        BluetoothAdapter mBluetoothAdapter = null;
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        InputStream tmpIn = null;
+        OutputStream tmpOut = null;
+        if (mBluetoothAdapter.isEnabled()) {
+            this.IsConnected = true;
+            device = mBluetoothAdapter.getRemoteDevice(address);
+
+            try {
+                this.btSocket = device.createInsecureRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException var10) {
+                return "-1";
+            }
+
+            mBluetoothAdapter.cancelDiscovery();
+
+            try {
+                this.btSocket.connect();
+                this.OutStream = this.btSocket.getOutputStream();
+                this.InStream = this.btSocket.getInputStream();
+            } catch (IOException var9) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            this.detect_bluetooth();
+            this.IsConnected = false;
+            return "-1";
+        }
+    }
+
+    public String sendcommand(String message) {
+        byte[] msgBuffer = message.getBytes();
+
+        try {
+            this.OutStream.write(msgBuffer);
+            this.OutStream.flush();
+            return "1";
+        } catch (IOException var4) {
+            return "-1";
+        }
+    }
+
+    public String sendcommand_getstring(String message) {
+        readBuf = new byte[1024];
+        String end_judge = "OUT \"ENDLINE\"\r\n";
+        byte[] msgBuffer = message.getBytes();
+        byte[] msgBuffer1 = "\r\n".getBytes();
+        byte[] msgBuffer2 = end_judge.getBytes();
+
+        try {
+            this.OutStream.write(msgBuffer);
+            this.OutStream.write(msgBuffer1);
+            this.OutStream.write(msgBuffer2);
+        } catch (IOException e) {
+            Log.e("THINBTCLIENT", "Exception during write\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        try {
+            while(!this.ReadStream_judge()) {
+            }
+        } catch (Exception e) {
+            Log.e("THINBTCLIENT", "Failed to read Judge\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        return receive_data;
+    }
+
+    public String sendcommand_getstring(String message, int timer) {
+        readBuf = new byte[1024];
+        String end_judge = "OUT \"ENDLINE\"\r\n";
+        byte[] msgBuffer = message.getBytes();
+        byte[] msgBuffer1 = "\r\n".getBytes();
+        byte[] msgBuffer2 = end_judge.getBytes();
+
+        try {
+            this.OutStream.write(msgBuffer);
+            this.OutStream.write(msgBuffer1);
+            this.OutStream.write(msgBuffer2);
+        } catch (IOException e) {
+            Log.e("THINBTCLIENT", "Exception during write\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        try {
+            while(!this.ReadStream_judge(timer)) {
+            }
+        } catch (Exception e) {
+            Log.e("THINBTCLIENT", "Failed to read Judge\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        return receive_data;
+    }
+
+    public String sendcommand(String message, int timer) {
+        byte[] msgBuffer = message.getBytes();
+
+        try {
+            Thread.sleep((long)timer);
+        } catch (InterruptedException e1) {
+            e1.printStackTrace();
+        }
+
+        try {
+            this.OutStream.write(msgBuffer);
+            return "1";
+        } catch (IOException var5) {
+            return "-1";
+        }
+    }
+
+    public String sendcommandUTF8(String message) {
+        if (this.OutStream != null && this.InStream != null) {
+            byte[] msgBuffer = null;
+
+            try {
+                msgBuffer = message.getBytes("UTF-8");
+            } catch (UnsupportedEncodingException e1) {
+                e1.printStackTrace();
+            }
+
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var4) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String sendcommandBig5(String message) {
+        if (this.OutStream != null && this.InStream != null) {
+            byte[] msgBuffer = null;
+
+            try {
+                msgBuffer = message.getBytes("big5");
+            } catch (UnsupportedEncodingException e1) {
+                e1.printStackTrace();
+            }
+
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var4) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String sendcommandGB2312(String message) {
+        if (this.OutStream != null && this.InStream != null) {
+            byte[] msgBuffer = null;
+
+            try {
+                msgBuffer = message.getBytes("GB2312");
+            } catch (UnsupportedEncodingException e1) {
+                e1.printStackTrace();
+            }
+
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var4) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String sendcommandGB2312(String message, int timer) {
+        if (this.OutStream != null && this.InStream != null) {
+            byte[] msgBuffer = null;
+
+            try {
+                msgBuffer = message.getBytes("GB2312");
+            } catch (UnsupportedEncodingException e1) {
+                e1.printStackTrace();
+            }
+
+            try {
+                Thread.sleep((long)timer);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var5) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String sendlargebyte(byte[] message) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                int str_length = message.length;
+                int offset = 0;
+
+                while(true) {
+                    int subDataSize = str_length - offset >= 65535 ? '\uffff' : message.length - offset;
+                    byte[] tmp_str = Arrays.copyOfRange(message, offset, offset + subDataSize);
+                    offset += subDataSize;
+                    this.OutStream.write(tmp_str);
+                    if (str_length - offset <= 0) {
+                        try {
+                            Thread.sleep((long)(subDataSize / 10));
+                        } catch (InterruptedException var7) {
+                            var7.printStackTrace();
+                        }
+
+                        return "1";
+                    }
+
+                    if (message.length >= 65535) {
+                        try {
+                            Thread.sleep(6300L);
+                        } catch (InterruptedException var7) {
+                            var7.printStackTrace();
+                        }
+                    }
+                }
+            } catch (IOException var9) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String sendcommand(byte[] message) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(message);
+                return "1";
+            } catch (IOException var3) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String sendcommand(byte[] message, int timer) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                Thread.sleep((long)timer);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+
+            try {
+                this.OutStream.write(message);
+                return "1";
+            } catch (IOException var4) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String status() {
+        this.printerstatus = "";
+        if (this.OutStream == null || this.InStream == null) {
+            if (this.OutStream == null) {
+                Log.e("THINBTCLIENT", "OutputStream is null\r\n");
+                return "-1";
+            }
+
+            if (this.InStream == null) {
+                Log.e("THINBTCLIENT", "InputStream is null\r\n");
+                return "-1";
+            }
+        }
+
+        byte[] message = new byte[]{27, 33, 83};
+        readBuf = new byte[1024];
+
+        try {
+            this.OutStream.write(message);
+        } catch (IOException e) {
+            Log.e("THINBTCLIENT", "Exception during write\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        try {
+            Thread.sleep(300L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            while(this.InStream.available() > 0) {
+                int e = this.InStream.read(readBuf);
+            }
+        } catch (IOException e) {
+            Log.e("THINBTCLIENT", "Exception during read\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        if (readBuf[0] == 2 && readBuf[5] == 3) {
+            for(int tim = 0; tim <= 7; ++tim) {
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 64 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Ready";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 96 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Head Open";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 64 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 96 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Head Open";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 72 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Ribbon Jam";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 68 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Ribbon Empty";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 65 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "No Paper";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 66 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Paper Jam";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 65 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Paper Empty";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 67 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Cutting";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 75 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Waiting to Press Print Key";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 76 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Waiting to Take Label";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 80 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Printing Batch";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 96 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Pause";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Pause";
+                    readBuf = new byte[1024];
+                    break;
+                }
+            }
+        }
+
+        return this.printerstatus;
+    }
+
+    public String status(int delay) {
+        this.printerstatus = "";
+        if (this.OutStream == null || this.InStream == null) {
+            if (this.OutStream == null) {
+                Log.e("THINBTCLIENT", "OutputStream is null\r\n");
+                return "-1";
+            }
+
+            if (this.InStream == null) {
+                Log.e("THINBTCLIENT", "InputStream is null\r\n");
+                return "-1";
+            }
+        }
+
+        byte[] message = new byte[]{27, 33, 83};
+        readBuf = new byte[1024];
+
+        try {
+            this.OutStream.write(message);
+        } catch (IOException e) {
+            Log.e("THINBTCLIENT", "Exception during write\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        try {
+            Thread.sleep((long)delay);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            while(this.InStream.available() > 0) {
+                readBuf = new byte[1024];
+                int e = this.InStream.read(readBuf);
+            }
+        } catch (IOException e) {
+            Log.e("THINBTCLIENT", "Exception during read\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        if (readBuf[0] == 2 && readBuf[5] == 3) {
+            for(int tim = 0; tim <= 7; ++tim) {
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 64 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Ready";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 96 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Head Open";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 64 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 96 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Head Open";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 72 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Ribbon Jam";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 68 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Ribbon Empty";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 65 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "No Paper";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 66 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Paper Jam";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 65 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Paper Empty";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 67 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Cutting";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 75 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Waiting to Press Print Key";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 76 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Waiting to Take Label";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 80 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Printing Batch";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 96 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Pause";
+                    readBuf = new byte[1024];
+                    break;
+                }
+
+                if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                    this.printerstatus = "Pause";
+                    readBuf = new byte[1024];
+                    break;
+                }
+            }
+        }
+
+        return this.printerstatus;
+    }
+
+    public String status(int delay1, int delay2) {
+        if (this.OutStream == null || this.InStream == null) {
+            if (this.OutStream == null) {
+                Log.e("THINBTCLIENT", "OutputStream is null\r\n");
+                return "-1";
+            }
+
+            if (this.InStream == null) {
+                Log.e("THINBTCLIENT", "InputStream is null\r\n");
+                return "-1";
+            }
+        }
+
+        byte[] message = new byte[]{27, 33, 83};
+        readBuf = new byte[1024];
+        String printername = "";
+        printername = this.printername(delay1);
+        int name_length = printername.toString().trim().length();
+        if (name_length < 3) {
+            Log.e("THINBTCLIENT", "Cannot get printername for validate\r\n");
+            return "-1";
+        } else {
+            try {
+                this.OutStream.write(message);
+            } catch (IOException e) {
+                Log.e("THINBTCLIENT", "Exception during write\r\n");
+                e.printStackTrace();
+            }
+
+            try {
+                Thread.sleep((long)delay2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    readBuf = new byte[1024];
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException e) {
+                Log.e("THINBTCLIENT", "Exception during read\r\n");
+                e.printStackTrace();
+                return "-1";
+            }
+
+            if (readBuf[0] == 2 && readBuf[5] == 3) {
+                for(int tim = 0; tim <= 7; ++tim) {
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 64 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Ready";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 96 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Head Open";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 64 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 96 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Head Open";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 72 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Ribbon Jam";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 68 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Ribbon Empty";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 65 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "No Paper";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 66 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Paper Jam";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 65 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Paper Empty";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 67 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Cutting";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 75 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Waiting to Press Print Key";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 76 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Waiting to Take Label";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 80 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Printing Batch";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 96 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Pause";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+
+                    if (readBuf[tim] == 2 && readBuf[tim + 1] == 69 && readBuf[tim + 2] == 64 && readBuf[tim + 3] == 64 && readBuf[tim + 4] == 64 && readBuf[tim + 5] == 3) {
+                        this.printerstatus = "Pause";
+                        readBuf = new byte[1024];
+                        break;
+                    }
+                }
+            }
+
+            return this.printerstatus;
+        }
+    }
+
+    public String printer_completestatus() {
+        if (this.OutStream != null && this.InStream != null) {
+            byte[] message = new byte[]{27, 33, 83};
+
+            try {
+                this.OutStream.write(message);
+            } catch (IOException var5) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(300L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() <= 0) {
+                }
+
+                readBuf = new byte[1024];
+                int length = this.InStream.read(readBuf);
+                if (length > 0) {
+                    String completestatus = new String(readBuf, 1, 4);
+                    return completestatus;
+                } else {
+                    return "-1";
+                }
+            } catch (IOException var6) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printer_completestatus(int delaytime) {
+        if (this.OutStream != null && this.InStream != null) {
+            byte[] message = new byte[]{27, 33, 83};
+
+            try {
+                this.OutStream.write(message);
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delaytime);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() <= 0) {
+                }
+
+                readBuf = new byte[1024];
+                int length = this.InStream.read(readBuf);
+                if (length > 0) {
+                    String completestatus = new String(readBuf, 1, 4);
+                    return completestatus;
+                } else {
+                    return "-1";
+                }
+            } catch (IOException var7) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    private String batch() {
+        int printvalue = 0;
+        String printbatch = "";
+        String stringbatch = "";
+        String message = "~HS";
+        byte[] batcharray = new byte[8];
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException e) {
+                Log.e("THINBTCLIENT", "ON RESUME: Exception during write.", e);
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    readBuf = new byte[1024];
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            if (readBuf[0] == 2) {
+                System.arraycopy(readBuf, 55, batcharray, 0, 8);
+                stringbatch = new String(batcharray);
+                printvalue = Integer.parseInt(stringbatch);
+                printbatch = Integer.toString(printvalue);
+            }
+
+            return printbatch;
+        } else {
+            return "-1";
+        }
+    }
+
+    private boolean ReadStream_judge() {
+        receive_data = "";
+
+        do {
+            try {
+                Thread.sleep(300L);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    readBuf = new byte[1024];
+                    int length = this.InStream.read(readBuf);
+                    String str = new String(readBuf);
+                    receive_data = receive_data + str;
+                }
+            } catch (IOException e) {
+                Log.e("THINBTCLIENT", "Exception during read\r\n");
+                e.printStackTrace();
+                return false;
+            }
+        } while(!receive_data.contains("ENDLINE\r\n"));
+
+        receive_data = receive_data.replace("ENDLINE\r\n", "");
+        return true;
+    }
+
+    private boolean ReadStream_judge(int delay) {
+        receive_data = "";
+
+        do {
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    readBuf = new byte[1024];
+                    int length = this.InStream.read(readBuf);
+                    String str = new String(readBuf);
+                    receive_data = receive_data + str;
+                }
+            } catch (IOException e) {
+                Log.e("THINBTCLIENT", "Exception during read\r\n");
+                e.printStackTrace();
+                return false;
+            }
+        } while(!receive_data.contains("ENDLINE\r\n"));
+
+        receive_data = receive_data.replace("ENDLINE\r\n", "");
+        return true;
+    }
+
+    public String printername() {
+        String message = "~!T";
+        byte[] batcharray = new byte[8];
+        byte[] msgBuffer = message.getBytes();
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var7) {
+                return "-1";
+            }
+
+            String name = new String(readBuf);
+            return name;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printername(int delay) {
+        String message = "~!T";
+        byte[] batcharray = new byte[8];
+        byte[] msgBuffer = message.getBytes();
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var7) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var8) {
+                return "-1";
+            }
+
+            String name = new String(readBuf);
+            return name;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printermemory() {
+        String message = "~!A";
+        byte[] msgBuffer = message.getBytes();
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var5) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            String memory = new String(readBuf);
+            return memory;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printermemory(int delay) {
+        String message = "~!A";
+        byte[] msgBuffer = message.getBytes();
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var7) {
+                return "-1";
+            }
+
+            String memory = new String(readBuf);
+            return memory;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printermileage() {
+        String message = "~!@";
+        byte[] msgBuffer = message.getBytes();
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var5) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            String mileage = new String(readBuf);
+            return mileage;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printermileage(int delay) {
+        String message = "~!@";
+        byte[] msgBuffer = message.getBytes();
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var7) {
+                return "-1";
+            }
+
+            String mileage = new String(readBuf);
+            return mileage;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printercodepage() {
+        String message = "~!I";
+        byte[] msgBuffer = message.getBytes();
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var5) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            String codepage = new String(readBuf);
+            return codepage;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printercodepage(int delay) {
+        String message = "~!I";
+        byte[] msgBuffer = message.getBytes();
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var7) {
+                return "-1";
+            }
+
+            String codepage = new String(readBuf);
+            return codepage;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printerfile() {
+        String message = "~!F";
+        readBuf = new byte[1024];
+        this.buffer = new byte[1024];
+        byte[] buffer2 = new byte[1024];
+        int last_bytes = 0;
+        int bytes = 0;
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var8) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(2000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    bytes = this.InStream.read(readBuf);
+                    if (bytes >= 0) {
+                        this.buffer = readBuf;
+                        System.arraycopy(this.buffer, 0, buffer2, last_bytes, bytes);
+                    }
+
+                    this.buffer = new byte[1024];
+                    last_bytes = bytes;
+                    readBuf = buffer2;
+                }
+            } catch (IOException var9) {
+                return "-1";
+            }
+
+            String files = new String(readBuf);
+            return files;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printerfile(int delay) {
+        String message = "~!F";
+        readBuf = new byte[1024];
+        this.buffer = new byte[1024];
+        byte[] buffer2 = new byte[1024];
+        int last_bytes = 0;
+        int bytes = 0;
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+            } catch (IOException var9) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    bytes = this.InStream.read(readBuf);
+                    if (bytes >= 0) {
+                        this.buffer = readBuf;
+                        System.arraycopy(this.buffer, 0, buffer2, last_bytes, bytes);
+                    }
+
+                    this.buffer = new byte[1024];
+                    last_bytes = bytes;
+                    readBuf = buffer2;
+                }
+            } catch (IOException var10) {
+                return "-1";
+            }
+
+            String files = new String(readBuf);
+            return files;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String restart() {
+        byte[] message = new byte[]{27, 33, 82};
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(message);
+                return "1";
+            } catch (IOException var3) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public byte printerstatus_byte() {
+        byte[] message = new byte[]{27, 33, 63};
+        String query = "";
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(message);
+            } catch (IOException var5) {
+                return -1;
+            }
+
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var6) {
+                readBuf[0] = -1;
+            }
+
+            return readBuf[0];
+        } else {
+            return -1;
+        }
+    }
+
+    public byte printerstatus_byte(int delay) {
+        byte[] message = new byte[]{27, 33, 63};
+        String query = "";
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(message);
+            } catch (IOException var6) {
+                return -1;
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var7) {
+                readBuf[0] = -1;
+            }
+
+            return readBuf[0];
+        } else {
+            return -1;
+        }
+    }
+
+    public String printerstatus() {
+        byte[] message = new byte[]{27, 33, 63};
+        String query = "";
+        int length = 0;
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(message);
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    length = this.InStream.read(readBuf);
+                }
+            } catch (IOException var7) {
+                return "-1";
+            }
+
+            if (length == 0) {
+                return "";
+            } else {
+                if (readBuf[0] == 0) {
+                    query = "00";
+                } else if (readBuf[0] == 1) {
+                    query = "01";
+                } else if (readBuf[0] == 2) {
+                    query = "02";
+                } else if (readBuf[0] == 3) {
+                    query = "03";
+                } else if (readBuf[0] == 4) {
+                    query = "04";
+                } else if (readBuf[0] == 5) {
+                    query = "05";
+                } else if (readBuf[0] == 8) {
+                    query = "08";
+                } else if (readBuf[0] == 9) {
+                    query = "09";
+                } else if (readBuf[0] == 10) {
+                    query = "0A";
+                } else if (readBuf[0] == 11) {
+                    query = "0B";
+                } else if (readBuf[0] == 12) {
+                    query = "0C";
+                } else if (readBuf[0] == 13) {
+                    query = "0D";
+                } else if (readBuf[0] == 16) {
+                    query = "10";
+                } else if (readBuf[0] == 32) {
+                    query = "20";
+                } else if (readBuf[0] == 128) {
+                    query = "80";
+                }
+
+                return query;
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printerstatus(int delay) {
+        byte[] message = new byte[]{27, 33, 63};
+        String query = "";
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(message);
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var7) {
+                return "-1";
+            }
+
+            if (readBuf[0] == 0) {
+                query = "00";
+            } else if (readBuf[0] == 1) {
+                query = "01";
+            } else if (readBuf[0] == 2) {
+                query = "02";
+            } else if (readBuf[0] == 3) {
+                query = "03";
+            } else if (readBuf[0] == 4) {
+                query = "04";
+            } else if (readBuf[0] == 5) {
+                query = "05";
+            } else if (readBuf[0] == 8) {
+                query = "08";
+            } else if (readBuf[0] == 9) {
+                query = "09";
+            } else if (readBuf[0] == 10) {
+                query = "0A";
+            } else if (readBuf[0] == 11) {
+                query = "0B";
+            } else if (readBuf[0] == 12) {
+                query = "0C";
+            } else if (readBuf[0] == 13) {
+                query = "0D";
+            } else if (readBuf[0] == 16) {
+                query = "10";
+            } else if (readBuf[0] == 32) {
+                query = "20";
+            } else if (readBuf[0] == 128) {
+                query = "80";
+            }
+
+            return query;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String queryprinter() {
+        byte[] message = new byte[]{27, 33, 63};
+        String query = "";
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(message);
+            } catch (IOException var5) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            if (readBuf[0] == 0) {
+                query = "0";
+            } else if (readBuf[0] == 1) {
+                query = "1";
+            } else if (readBuf[0] == 2) {
+                query = "2";
+            } else if (readBuf[0] == 3) {
+                query = "3";
+            } else if (readBuf[0] == 4) {
+                query = "4";
+            } else if (readBuf[0] == 5) {
+                query = "5";
+            } else if (readBuf[0] == 8) {
+                query = "8";
+            } else if (readBuf[0] == 9) {
+                query = "9";
+            } else if (readBuf[0] == 10) {
+                query = "A";
+            } else if (readBuf[0] == 11) {
+                query = "B";
+            } else if (readBuf[0] == 12) {
+                query = "C";
+            } else if (readBuf[0] == 13) {
+                query = "D";
+            } else if (readBuf[0] == 16) {
+                query = "10";
+            } else if (readBuf[0] == 32) {
+                query = "20";
+            } else if (readBuf[0] == 128) {
+                query = "80";
+            }
+
+            return query;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String queryprinter(int delay) {
+        byte[] message = new byte[]{27, 33, 63};
+        String query = "";
+        readBuf = new byte[1024];
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(message);
+            } catch (IOException var6) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep((long)delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                while(this.InStream.available() > 0) {
+                    int e = this.InStream.read(readBuf);
+                }
+            } catch (IOException var7) {
+                return "-1";
+            }
+
+            if (readBuf[0] == 0) {
+                query = "0";
+            } else if (readBuf[0] == 1) {
+                query = "1";
+            } else if (readBuf[0] == 2) {
+                query = "2";
+            } else if (readBuf[0] == 3) {
+                query = "3";
+            } else if (readBuf[0] == 4) {
+                query = "4";
+            } else if (readBuf[0] == 5) {
+                query = "5";
+            } else if (readBuf[0] == 8) {
+                query = "8";
+            } else if (readBuf[0] == 9) {
+                query = "9";
+            } else if (readBuf[0] == 10) {
+                query = "A";
+            } else if (readBuf[0] == 11) {
+                query = "B";
+            } else if (readBuf[0] == 12) {
+                query = "C";
+            } else if (readBuf[0] == 13) {
+                query = "D";
+            } else if (readBuf[0] == 16) {
+                query = "10";
+            } else if (readBuf[0] == 32) {
+                query = "20";
+            } else if (readBuf[0] == 128) {
+                query = "80";
+            }
+
+            return query;
+        } else {
+            return "-1";
+        }
+    }
+
+    public String closeport() {
+        try {
+            Thread.sleep(1500L);
+        } catch (InterruptedException var4) {
+        }
+
+        if (this.btSocket.isConnected()) {
+            try {
+                this.IsConnected = false;
+                this.btSocket.close();
+            } catch (IOException var3) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException var2) {
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String closeport(int timeout) {
+        try {
+            Thread.sleep((long)timeout);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        if (this.btSocket.isConnected()) {
+            try {
+                this.IsConnected = false;
+                this.btSocket.close();
+            } catch (IOException var4) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String setup(int width, int height, int speed, int density, int sensor, int sensor_distance, int sensor_offset) {
+        String message = "";
+        String size = "SIZE " + width + " mm" + ", " + height + " mm";
+        String speed_value = "SPEED " + speed;
+        String density_value = "DENSITY " + density;
+        String sensor_value = "";
+        if (sensor == 0) {
+            sensor_value = "GAP " + sensor_distance + " mm" + ", " + sensor_offset + " mm";
+        } else if (sensor == 1) {
+            sensor_value = "BLINE " + sensor_distance + " mm" + ", " + sensor_offset + " mm";
+        }
+
+        message = size + "\r\n" + speed_value + "\r\n" + density_value + "\r\n" + sensor_value + "\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var15) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String clearbuffer() {
+        String message = "CLS\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var4) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String barcode(int x, int y, String type, int height, int human_readable, int rotation, int narrow, int wide, String string) {
+        String message = "";
+        String barcode = "BARCODE ";
+        String position = x + "," + y;
+        String mode = "\"" + type + "\"";
+        String height_value = "" + height;
+        String human_value = "" + human_readable;
+        String rota = "" + rotation;
+        String narrow_value = "" + narrow;
+        String wide_value = "" + wide;
+        String string_value = "\"" + string + "\"";
+        message = barcode + position + " ," + mode + " ," + height_value + " ," + human_value + " ," + rota + " ," + narrow_value + " ," + wide_value + " ," + string_value + "\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var22) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String qrcode(int x, int y, String ecc, String cell, String mode, String rotation, String model, String mask, String content) {
+        String message = "QRCODE " + x + "," + y + "," + ecc + "," + cell + "," + mode + "," + rotation + "," + model + "," + mask + "," + "\"" + content + "\"" + "\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var13) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String bar(String x, String y, String width, String height) {
+        String message = "BAR " + x + "," + y + "," + width + "," + height + "\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var8) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printerfont(int x, int y, String size, int rotation, int x_multiplication, int y_multiplication, String string) {
+        String message = "";
+        String text = "TEXT ";
+        String position = x + "," + y;
+        String size_value = "\"" + size + "\"";
+        String rota = "" + rotation;
+        String x_value = "" + x_multiplication;
+        String y_value = "" + y_multiplication;
+        String string_value = "\"" + string + "\"";
+        message = text + position + " ," + size_value + " ," + rota + " ," + x_value + " ," + y_value + " ," + string_value + "\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var18) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String printlabel(int quantity, int copy) {
+        String message = "";
+        message = "PRINT " + quantity + ", " + copy + "\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var6) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String formfeed() {
+        String message = "";
+        message = "FORMFEED\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var4) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String nobackfeed() {
+        String message = "";
+        message = "SET TEAR OFF\r\n";
+        byte[] msgBuffer = message.getBytes();
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                this.OutStream.write(msgBuffer);
+                return "1";
+            } catch (IOException var4) {
+                return "-1";
+            }
+        } else {
+            return "-1";
+        }
+    }
+
+    public String sendfile(String filename) {
+        try {
+            FileInputStream fis = new FileInputStream(Environment.getExternalStorageDirectory().getPath() + "/Download/" + filename);
+            byte[] data = new byte[fis.available()];
+            int[] FF = new int[data.length];
+
+            while(fis.read(data) != -1) {
+            }
+
+            this.OutStream.write(data);
+            fis.close();
+            return "1";
+        } catch (Exception var5) {
+            return "-1";
+        }
+    }
+
+    public String sendfile(String path, String filename) {
+        String qq = Environment.getExternalStorageDirectory().getPath();
+
+        try {
+            FileInputStream fis = new FileInputStream(Environment.getExternalStorageDirectory().getPath() + "/" + path + filename);
+            byte[] data = new byte[fis.available()];
+            int[] FF = new int[data.length];
+
+            while(fis.read(data) != -1) {
+            }
+
+            this.OutStream.write(data);
+            fis.close();
+            return "1";
+        } catch (Exception var7) {
+            return "-1";
+        }
+    }
+
+    public String sendfile(Context ctx, Uri uri) {
+        try {
+            InputStream fis = ctx.getContentResolver().openInputStream(uri);
+            byte[] data = new byte[fis.available()];
+            int[] FF = new int[data.length];
+
+            while(fis.read(data) != -1) {
+            }
+
+            this.OutStream.write(data);
+            fis.close();
+            return "1";
+        } catch (Exception var6) {
+            return "-1";
+        }
+    }
+
+    public byte[] return_file_byte(String path, String filename) {
+        byte[] error_status = "ERROR".getBytes();
+        byte[] data = new byte[1024];
+
+        try {
+            FileInputStream fis = new FileInputStream(Environment.getExternalStorageDirectory().getPath() + "/" + path + filename);
+            data = new byte[fis.available()];
+            fis.close();
+            return data;
+        } catch (Exception var6) {
+            return error_status;
+        }
+    }
+
+    public String send_file_data(String download_name, byte[] data) {
+        try {
+            String download = "DOWNLOAD F,\"" + download_name + "\"," + data.length + ",";
+            byte[] download_head = download.getBytes();
+            this.OutStream.write(download_head);
+            this.OutStream.write(data);
+            this.OutStream.flush();
+        } catch (Exception var6) {
+            return "-1";
+        }
+
+        try {
+            Thread.sleep(100L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return "1";
+    }
+
+    public String downloadfile_absolutePath(String path, String Store_name) {
+        try {
+            FileInputStream fis = new FileInputStream(path);
+            byte[] data = new byte[fis.available()];
+            int[] FF = new int[data.length];
+            String download = "DOWNLOAD F,\"" + Store_name + "\"," + data.length + ",";
+            byte[] download_head = download.getBytes();
+
+            while(fis.read(data) != -1) {
+            }
+
+            this.OutStream.write(download_head);
+            this.OutStream.write(data);
+            this.OutStream.flush();
+            fis.close();
+        } catch (Exception var9) {
+            return "-1";
+        }
+
+        try {
+            Thread.sleep(100L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return "1";
+    }
+
+    public String downloadfile_absolutePath(File file, String Store_name) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                FileInputStream fis = new FileInputStream(file);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + Store_name + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var9) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadfile(String path, String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                FileInputStream fis = new FileInputStream(path + filename);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var9) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadfile(File file, String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                FileInputStream fis = new FileInputStream(file);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var9) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadfile_D(String path, String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                FileInputStream fis = new FileInputStream(path + filename);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var9) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadfile(String path, String filename, String savename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                FileInputStream fis = new FileInputStream(path + filename);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + savename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var10) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadpcx(String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                FileInputStream fis = new FileInputStream(Environment.getExternalStorageDirectory().getPath() + "/Download/" + filename);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var8) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadbmp(String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                FileInputStream fis = new FileInputStream(Environment.getExternalStorageDirectory().getPath() + "/Download/" + filename);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var8) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadttf(String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                FileInputStream fis = new FileInputStream(Environment.getExternalStorageDirectory().getPath() + "/Download/" + filename);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var8) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadpcx(Context ctx, Uri uri, String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                InputStream fis = ctx.getContentResolver().openInputStream(uri);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var10) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadbmp(Context ctx, Uri uri, String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                InputStream fis = ctx.getContentResolver().openInputStream(uri);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var10) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String downloadttf(Context ctx, Uri uri, String filename) {
+        if (this.OutStream != null && this.InStream != null) {
+            try {
+                InputStream fis = ctx.getContentResolver().openInputStream(uri);
+                byte[] data = new byte[fis.available()];
+                int[] FF = new int[data.length];
+                String download = "DOWNLOAD F,\"" + filename + "\"," + data.length + ",";
+                byte[] download_head = download.getBytes();
+
+                while(fis.read(data) != -1) {
+                }
+
+                this.OutStream.write(download_head);
+                this.OutStream.write(data);
+                this.OutStream.flush();
+                fis.close();
+            } catch (Exception var10) {
+                return "-1";
+            }
+
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String windowsfont(int x_coordinates, int y_coordinates, int fontsize, String path, String textToPrint) {
+        File file = new File(path);
+        if (!file.exists()) {
+            return "-1";
+        } else {
+            Bitmap original_bitmap = null;
+            Bitmap gray_bitmap = null;
+            Bitmap binary_bitmap = null;
+            Paint paint = new Paint();
+            paint.setStyle(Style.FILL);
+            paint.setColor(-16777216);
+            paint.setAntiAlias(true);
+            Typeface typeface = Typeface.createFromFile(path);
+            paint.setTypeface(typeface);
+            paint.setTextSize((float)fontsize);
+            TextPaint textpaint = new TextPaint(paint);
+            StaticLayout staticLayout = new StaticLayout(textToPrint, textpaint, 832, Alignment.ALIGN_NORMAL, 1.0F, 0.0F, false);
+            int height = staticLayout.getHeight();
+            int width = (int)Layout.getDesiredWidth(textToPrint, textpaint);
+            if (height > 2378) {
+                height = 2378;
+            }
+
+            try {
+                original_bitmap = Bitmap.createBitmap(width + 8, height, Config.RGB_565);
+                Canvas c = new Canvas(original_bitmap);
+                c.drawColor(-1);
+                c.translate(0.0F, 0.0F);
+                staticLayout.draw(c);
+            } catch (IllegalArgumentException var32) {
+            } catch (OutOfMemoryError var33) {
+            }
+
+            gray_bitmap = this.bitmap2Gray(original_bitmap);
+            binary_bitmap = this.gray2Binary(gray_bitmap);
+            String x_axis = Integer.toString(x_coordinates);
+            String y_axis = Integer.toString(y_coordinates);
+            String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+            String picture_height = Integer.toString(binary_bitmap.getHeight());
+            String mode = Integer.toString(0);
+            byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+            int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+            int Width = binary_bitmap.getWidth();
+            int Height = binary_bitmap.getHeight();
+
+            for(int i = 0; i < Height * Width_bytes; ++i) {
+                stream[i] = -1;
+            }
+
+            for(int y = 0; y < Height; ++y) {
+                for(int x = 0; x < Width; ++x) {
+                    int pixelColor = binary_bitmap.getPixel(x, y);
+                    int colorR = Color.red(pixelColor);
+                    int colorG = Color.green(pixelColor);
+                    int colorB = Color.blue(pixelColor);
+                    int total = (colorR + colorG + colorB) / 3;
+                    if (total == 0) {
+                        stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                    }
+                }
+            }
+
+            byte[] header = new byte[]{33, 83, (byte)(x_coordinates % 256), (byte)(x_coordinates / 256), (byte)(y_coordinates % 256), (byte)(y_coordinates / 256), (byte)(Width_bytes % 256), (byte)(Width_bytes / 256), (byte)(Height % 256), (byte)(Height / 256), 0, 0, 0, 0, 0, 0};
+            lzss encode = new lzss();
+            byte[] encoded_data = encode.LZSSEncoding(stream, stream.length);
+            byte[] var37 = null;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            out.write(header, 0, header.length);
+            out.write(encoded_data, 0, encoded_data.length);
+            out.write("\r\n".getBytes(), 0, 2);
+            this.sendcommand(out.toByteArray());
+            return "1";
+        }
+    }
+
+    public String windowsfont(int x_coordinates, int y_coordinates, int fontsize, String path, String textToPrint, int direction, int alignment) {
+        File file = new File(path);
+        if (!file.exists()) {
+            return "-1";
+        } else {
+            Bitmap original_bitmap = null;
+            Bitmap gray_bitmap = null;
+            Bitmap binary_bitmap = null;
+            Paint paint = new Paint();
+            paint.setStyle(Style.FILL);
+            paint.setColor(-16777216);
+            paint.setAntiAlias(true);
+            Typeface typeface = Typeface.createFromFile(path);
+            paint.setTypeface(typeface);
+            paint.setTextSize((float)fontsize);
+            TextPaint textpaint = new TextPaint(paint);
+            StaticLayout staticLayout = new StaticLayout(textToPrint, textpaint, 832, Alignment.ALIGN_NORMAL, 1.0F, 0.0F, false);
+            int height = staticLayout.getHeight();
+            int width = (int)Layout.getDesiredWidth(textToPrint, textpaint);
+            if (height > 2378) {
+                height = 2378;
+            }
+
+            try {
+                original_bitmap = Bitmap.createBitmap(width + 8, height, Config.RGB_565);
+                Canvas c = new Canvas(original_bitmap);
+                c.drawColor(-1);
+                c.translate(0.0F, 0.0F);
+                staticLayout.draw(c);
+            } catch (IllegalArgumentException var38) {
+            } catch (OutOfMemoryError var39) {
+            }
+
+            Bitmap rotate_bmp = null;
+            switch (direction) {
+                case 0:
+                    rotate_bmp = this.rotateBitmap(original_bitmap, 0.0F);
+                    break;
+                case 90:
+                    rotate_bmp = this.rotateBitmap(original_bitmap, 90.0F);
+                    break;
+                case 180:
+                    rotate_bmp = this.rotateBitmap(original_bitmap, 180.0F);
+                    break;
+                case 270:
+                    rotate_bmp = this.rotateBitmap(original_bitmap, 270.0F);
+                    break;
+                default:
+                    rotate_bmp = this.rotateBitmap(original_bitmap, 0.0F);
+            }
+
+            gray_bitmap = this.bitmap2Gray(rotate_bmp);
+            binary_bitmap = this.gray2Binary(gray_bitmap);
+            int x_coordinates_m = x_coordinates;
+            int y_coordinates_m = y_coordinates;
+            if (alignment == 2) {
+                switch (direction) {
+                    case 0:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth() / 2;
+                        break;
+                    case 90:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth();
+                        y_coordinates_m = y_coordinates - rotate_bmp.getHeight() / 2;
+                        break;
+                    case 180:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth() / 2;
+                        y_coordinates_m = y_coordinates - rotate_bmp.getHeight();
+                        break;
+                    case 270:
+                        y_coordinates_m = y_coordinates - rotate_bmp.getHeight() / 2;
+                        break;
+                    default:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth() / 2;
+                }
+            } else if (alignment == 3) {
+                switch (direction) {
+                    case 0:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth();
+                        break;
+                    case 90:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth();
+                        y_coordinates_m = y_coordinates - rotate_bmp.getHeight();
+                        break;
+                    case 180:
+                        x_coordinates_m = x_coordinates;
+                        y_coordinates_m = y_coordinates - rotate_bmp.getHeight();
+                    case 270:
+                        break;
+                    default:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth();
+                }
+            } else {
+                switch (direction) {
+                    case 0:
+                    default:
+                        break;
+                    case 90:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth();
+                        break;
+                    case 180:
+                        x_coordinates_m = x_coordinates - rotate_bmp.getWidth();
+                        y_coordinates_m = y_coordinates - rotate_bmp.getHeight();
+                        break;
+                    case 270:
+                        y_coordinates_m = y_coordinates - rotate_bmp.getHeight();
+                }
+            }
+
+            String x_axis = Integer.toString(x_coordinates_m);
+            String y_axis = Integer.toString(y_coordinates_m);
+            String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+            String picture_height = Integer.toString(binary_bitmap.getHeight());
+            String mode = Integer.toString(0);
+            String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+            byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+            int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+            int Width = binary_bitmap.getWidth();
+            int Height = binary_bitmap.getHeight();
+
+            for(int i = 0; i < Height * Width_bytes; ++i) {
+                stream[i] = -1;
+            }
+
+            for(int y = 0; y < Height; ++y) {
+                for(int x = 0; x < Width; ++x) {
+                    int pixelColor = binary_bitmap.getPixel(x, y);
+                    int colorR = Color.red(pixelColor);
+                    int colorG = Color.green(pixelColor);
+                    int colorB = Color.blue(pixelColor);
+                    int total = (colorR + colorG + colorB) / 3;
+                    if (total == 0) {
+                        stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                    }
+                }
+            }
+
+            this.sendcommand(command);
+            this.sendcommand(stream);
+            this.sendcommand("\r\n");
+            return "1";
+        }
+    }
+
+    private Bitmap rotateBitmap(Bitmap original, float degrees) {
+        int width = original.getWidth();
+        int height = original.getHeight();
+        Matrix matrix = new Matrix();
+        matrix.preRotate(degrees);
+        Bitmap rotatedBitmap = Bitmap.createBitmap(original, 0, 0, width, height, matrix, true);
+        return rotatedBitmap;
+    }
+
+    public String windowsfont(int x_coordinates, int y_coordinates, Bitmap original_bitmap) {
+        Bitmap gray_bitmap = null;
+        Bitmap binary_bitmap = null;
+        gray_bitmap = this.bitmap2Gray(original_bitmap);
+        binary_bitmap = this.gray2Binary(gray_bitmap);
+        String x_axis = Integer.toString(x_coordinates);
+        String y_axis = Integer.toString(y_coordinates);
+        String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+        String picture_height = Integer.toString(binary_bitmap.getHeight());
+        String mode = Integer.toString(0);
+        byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+        int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+        int Width = binary_bitmap.getWidth();
+        int Height = binary_bitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = -1;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = binary_bitmap.getPixel(x, y);
+                int colorR = Color.red(pixelColor);
+                int colorG = Color.green(pixelColor);
+                int colorB = Color.blue(pixelColor);
+                int total = (colorR + colorG + colorB) / 3;
+                if (total == 0) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        byte[] header = new byte[]{33, 83, (byte)(x_coordinates % 256), (byte)(x_coordinates / 256), (byte)(y_coordinates % 256), (byte)(y_coordinates / 256), (byte)(Width_bytes % 256), (byte)(Width_bytes / 256), (byte)(Height % 256), (byte)(Height / 256), 0, 0, 0, 0, 0, 0};
+        lzss encode = new lzss();
+        byte[] encoded_data = encode.LZSSEncoding(stream, stream.length);
+        byte[] var24 = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(header, 0, header.length);
+        out.write(encoded_data, 0, encoded_data.length);
+        out.write("\r\n".getBytes(), 0, 2);
+        this.sendcommand(out.toByteArray());
+        return "1";
+    }
+
+    public void sendpicture(int x_coordinates, int y_coordinates, String path) {
+        Bitmap original_bitmap = null;
+        Bitmap gray_bitmap = null;
+        Bitmap binary_bitmap = null;
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPurgeable = true;
+        options.inPreferredConfig = Config.ARGB_8888;
+        original_bitmap = BitmapFactory.decodeFile(path, options);
+        gray_bitmap = this.bitmap2Gray(original_bitmap);
+        binary_bitmap = this.gray2Binary(gray_bitmap);
+        String x_axis = Integer.toString(x_coordinates);
+        String y_axis = Integer.toString(y_coordinates);
+        String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+        String picture_height = Integer.toString(binary_bitmap.getHeight());
+        String mode = Integer.toString(0);
+        String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+        byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+        int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+        int Width = binary_bitmap.getWidth();
+        int Height = binary_bitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = -1;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = binary_bitmap.getPixel(x, y);
+                int colorR = Color.red(pixelColor);
+                int colorG = Color.green(pixelColor);
+                int colorB = Color.blue(pixelColor);
+                int total = (colorR + colorG + colorB) / 3;
+                if (total == 0) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        this.sendcommand(command);
+        this.sendlargebyte(stream);
+        this.sendcommand("\r\n");
+    }
+
+    public void sendbitmap(int x_coordinates, int y_coordinates, Bitmap original_bitmap) {
+        this.sendbitmap(x_coordinates, y_coordinates, original_bitmap, 128);
+    }
+
+    public void sendbitmap(int x_coordinates, int y_coordinates, Bitmap original_bitmap, int threshold) {
+        byte[] stream = new byte[(original_bitmap.getWidth() + 7) / 8 * original_bitmap.getHeight()];
+        int Width_bytes = (original_bitmap.getWidth() + 7) / 8;
+        int Width = original_bitmap.getWidth();
+        int Height = original_bitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = -1;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = original_bitmap.getPixel(x, y);
+                int gray = (int)((double)((float)Color.red(pixelColor)) * 0.3 + (double)((float)Color.green(pixelColor)) * 0.59 + (double)((float)Color.blue(pixelColor)) * 0.11);
+                if (gray < threshold) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        byte[] header = new byte[]{33, 83, (byte)(x_coordinates % 256), (byte)(x_coordinates / 256), (byte)(y_coordinates % 256), (byte)(y_coordinates / 256), (byte)(Width_bytes % 256), (byte)(Width_bytes / 256), (byte)(Height % 256), (byte)(Height / 256), 0, 0, 0, 0, 0, 0};
+        lzss encode = new lzss();
+        byte[] encoded_data = encode.LZSSEncoding(stream, stream.length);
+        byte[] var13 = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(header, 0, header.length);
+        out.write(encoded_data, 0, encoded_data.length);
+        out.write("\r\n".getBytes(), 0, 2);
+        this.sendcommand(out.toByteArray());
+        byte[] var16 = null;
+        byte[] var19 = null;
+    }
+
+    private void sendbitmap_resize(int x_coordinates, int y_coordinates, Bitmap original_bitmap, int resize_width, int resize_height) {
+        this.sendbitmap_resize(x_coordinates, y_coordinates, original_bitmap, resize_width, resize_height, 128);
+    }
+
+    private void sendbitmap_resize(int x_coordinates, int y_coordinates, Bitmap original_bitmap, int resize_width, int resize_height, int threshold) {
+        Bitmap resizedBitmap = Bitmap.createScaledBitmap(original_bitmap, resize_width, resize_height, false);
+        byte[] stream = new byte[(resizedBitmap.getWidth() + 7) / 8 * resizedBitmap.getHeight()];
+        int Width_bytes = (resizedBitmap.getWidth() + 7) / 8;
+        int Width = resizedBitmap.getWidth();
+        int Height = resizedBitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = -1;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = resizedBitmap.getPixel(x, y);
+                int gray = (int)((double)((float)Color.red(pixelColor)) * 0.3 + (double)((float)Color.green(pixelColor)) * 0.59 + (double)((float)Color.blue(pixelColor)) * 0.11);
+                if (gray < threshold) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        byte[] header = new byte[]{33, 83, (byte)(x_coordinates % 256), (byte)(x_coordinates / 256), (byte)(y_coordinates % 256), (byte)(y_coordinates / 256), (byte)(Width_bytes % 256), (byte)(Width_bytes / 256), (byte)(Height % 256), (byte)(Height / 256), 0, 0, 0, 0, 0, 0};
+        lzss encode = new lzss();
+        byte[] encoded_data = encode.LZSSEncoding(stream, stream.length);
+        byte[] var16 = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(header, 0, header.length);
+        out.write(encoded_data, 0, encoded_data.length);
+        out.write("\r\n".getBytes(), 0, 2);
+        this.sendcommand(out.toByteArray());
+    }
+
+    public void sendbitmap_gray_resize(int x_coordinates, int y_coordinates, Bitmap original_bitmap, int resize_width, int resize_height) {
+        Bitmap gray_bitmap = null;
+        Bitmap binary_bitmap = null;
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPurgeable = true;
+        options.inPreferredConfig = Config.ARGB_8888;
+        Bitmap resizedBitmap = Bitmap.createScaledBitmap(original_bitmap, resize_width, resize_height, false);
+        binary_bitmap = resizedBitmap;
+        String x_axis = Integer.toString(x_coordinates);
+        String y_axis = Integer.toString(y_coordinates);
+        String picture_wdith = Integer.toString((resizedBitmap.getWidth() + 7) / 8);
+        String picture_height = Integer.toString(resizedBitmap.getHeight());
+        String mode = Integer.toString(0);
+        String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+        byte[] stream = new byte[(resizedBitmap.getWidth() + 7) / 8 * resizedBitmap.getHeight()];
+        int Width_bytes = (resizedBitmap.getWidth() + 7) / 8;
+        int Width = resizedBitmap.getWidth();
+        int Height = resizedBitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = -1;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = binary_bitmap.getPixel(x, y);
+                int colorA = Color.alpha(pixelColor);
+                int colorR = Color.red(pixelColor);
+                int colorG = Color.green(pixelColor);
+                int colorB = Color.blue(pixelColor);
+                int total = (colorR + colorG + colorB) / 3;
+                if (colorA != 0) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        this.sendcommand(command);
+        this.sendlargebyte(stream);
+        this.sendcommand("\r\n");
+    }
+
+    public static Bitmap Stucki(Bitmap src) {
+        Bitmap out = Bitmap.createBitmap(src.getWidth(), src.getHeight(), src.getConfig());
+        int threshold = 128;
+        int width = src.getWidth();
+        int height = src.getHeight();
+        int error = 0;
+        int[][] errors = new int[width][height];
+        int[] pixels_orig = new int[width * height];
+        int[] pixels_new = new int[width * height];
+        src.getPixels(pixels_orig, 0, width, 0, 0, width, height);
+
+        for(int y = 0; y < height; ++y) {
+            for(int x = 0; x < width; ++x) {
+                int pixel = pixels_orig[y * width + x];
+                int alpha = Color.alpha(pixel);
+                int red = Color.red(pixel);
+                int green = Color.green(pixel);
+                int blue = Color.blue(pixel);
+                int grayC = (int)(0.21 * (double)red + 0.72 * (double)green + 0.07 * (double)blue);
+                short gray;
+                if (grayC + errors[x][y] < threshold) {
+                    error = grayC + errors[x][y];
+                    gray = 0;
+                } else {
+                    error = grayC + errors[x][y] - 255;
+                    gray = 255;
+                }
+
+                if (x < width - 1) {
+                    errors[x + 1][y] += 7 * error / 42;
+                }
+
+                if (x < width - 2) {
+                    errors[x + 2][y] += 5 * error / 42;
+                }
+
+                if (x > 1 && y < height - 1) {
+                    errors[x - 2][y + 1] += 2 * error / 42;
+                }
+
+                if (x > 0 && y < height - 1) {
+                    errors[x - 1][y + 1] += 4 * error / 42;
+                }
+
+                if (y < height - 1) {
+                    errors[x][y + 1] += 8 * error / 42;
+                }
+
+                if (x < width - 1 && y < height - 1) {
+                    errors[x + 1][y + 1] += 4 * error / 42;
+                }
+
+                if (x < width - 2 && y < height - 1) {
+                    errors[x + 2][y + 1] += 2 * error / 42;
+                }
+
+                if (x > 1 && y < height - 2) {
+                    errors[x - 2][y + 2] += 1 * error / 42;
+                }
+
+                if (x > 0 && y < height - 2) {
+                    errors[x - 1][y + 2] += 2 * error / 42;
+                }
+
+                if (y < height - 2) {
+                    errors[x][y + 2] += 4 * error / 42;
+                }
+
+                if (x < width - 1 && y < height - 2) {
+                    errors[x + 1][y + 2] += 2 * error / 42;
+                }
+
+                if (x < width - 2 && y < height - 2) {
+                    errors[x + 2][y + 2] += 1 * error / 42;
+                }
+
+                out.setPixel(x, y, Color.argb(alpha, gray, gray, gray));
+                pixels_new[y * width + x] = Color.argb(alpha, gray, gray, gray);
+            }
+        }
+
+        out.setPixels(pixels_new, 0, width, 0, 0, width, height);
+        int[][] var19 = null;
+        int[] var20 = null;
+        int[] var21 = null;
+        return out;
+    }
+
+    public void DownloadPNG(Bitmap original_bitmap, int resize_width, int resize_height, String PNGName, boolean ToDRAM) {
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPurgeable = true;
+        options.inPreferredConfig = Config.ARGB_8888;
+        Bitmap resizedBitmap = Bitmap.createScaledBitmap(original_bitmap, resize_width, resize_height, false);
+        byte[] buf = new byte[0];
+
+        try {
+            int threshold = 128;
+            int width = resizedBitmap.getWidth();
+            int height = resizedBitmap.getHeight();
+            int error = 0;
+            int[] errors_1d = new int[width * height];
+            int[] pixels_orig = new int[width * height];
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            resizedBitmap.getPixels(pixels_orig, 0, width, 0, 0, width, height);
+            PngWriter pngPngWriter = new PngWriter(baos, new ImageInfo(resize_width, resize_height, 1, false, true, false));
+            ImageLineInt iline1 = new ImageLineInt(pngPngWriter.imgInfo);
+
+            for(int y = 0; y < height; ++y) {
+                for(int x = 0; x < width; ++x) {
+                    int pixel = pixels_orig[y * width + x];
+                    int gray = (21 * Color.red(pixel) + 72 * Color.green(pixel) + 7 * Color.blue(pixel)) / 100;
+                    if (gray + errors_1d[x + y * width] < threshold) {
+                        error = gray + errors_1d[x + y * width];
+                        iline1.getScanline()[x] = 0;
+                    } else {
+                        error = gray + errors_1d[x + y * width] - 255;
+                        iline1.getScanline()[x] = 1;
+                    }
+
+                    if (x < width - 1) {
+                        errors_1d[x + 1 + y * width] += 7 * error / 16;
+                    }
+
+                    if (x > 0 && y < height - 1) {
+                        errors_1d[x - 1 + (y + 1) * width] += 3 * error / 16;
+                    }
+
+                    if (y < height - 1) {
+                        errors_1d[x + (y + 1) * width] += 5 * error / 16;
+                    }
+
+                    if (x < width - 1 && y < height - 1) {
+                        errors_1d[x + 1 + (y + 1) * width] += 1 * error / 16;
+                    }
+                }
+
+                pngPngWriter.writeRow(iline1, y);
+            }
+
+            int[] var28 = null;
+            int[] var29 = null;
+            pngPngWriter.end();
+            baos.flush();
+            baos.close();
+            buf = baos.toByteArray();
+            String command = "DOWNLOAD " + (ToDRAM ? "" : "F,") + "\"" + PNGName + "\"," + buf.length + ",";
+            this.sendcommand(command);
+            this.sendlargebyte(buf);
+            resizedBitmap.recycle();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        byte[] var26 = null;
+    }
+
+    public void sendpicture_halftone(int x_coordinates, int y_coordinates, String path) {
+        Bitmap original_bitmap = null;
+        Bitmap gray_bitmap = null;
+        Bitmap binary_bitmap = null;
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPurgeable = true;
+        options.inPreferredConfig = Config.ARGB_8888;
+        original_bitmap = BitmapFactory.decodeFile(path, options);
+        gray_bitmap = this.bitmap2Gray(original_bitmap);
+        binary_bitmap = this.gray2halftone(gray_bitmap);
+        String x_axis = Integer.toString(x_coordinates);
+        String y_axis = Integer.toString(y_coordinates);
+        String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+        String picture_height = Integer.toString(binary_bitmap.getHeight());
+        String mode = Integer.toString(0);
+        String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+        byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+        int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+        int Width = binary_bitmap.getWidth();
+        int Height = binary_bitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = -1;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = binary_bitmap.getPixel(x, y);
+                int colorR = Color.red(pixelColor);
+                int colorG = Color.green(pixelColor);
+                int colorB = Color.blue(pixelColor);
+                int total = (colorR + colorG + colorB) / 3;
+                if (total == 0) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        this.sendcommand(command);
+        this.sendlargebyte(stream);
+        this.sendcommand("\r\n");
+    }
+
+    public void sendpicture_CPCL(int x_coordinates, int y_coordinates, String path) {
+        Bitmap original_bitmap = null;
+        Bitmap gray_bitmap = null;
+        Bitmap binary_bitmap = null;
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPurgeable = true;
+        options.inPreferredConfig = Config.ARGB_8888;
+        original_bitmap = BitmapFactory.decodeFile(path, options);
+        gray_bitmap = this.bitmap2Gray(original_bitmap);
+        binary_bitmap = this.gray2Binary(gray_bitmap);
+        String x_axis = Integer.toString(x_coordinates);
+        String y_axis = Integer.toString(y_coordinates);
+        String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+        String picture_height = Integer.toString(binary_bitmap.getHeight());
+        String mode = Integer.toString(0);
+        String command = "EG " + picture_wdith + " " + picture_height + " " + x_axis + " " + y_axis + " ";
+        byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+        int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+        int Width = binary_bitmap.getWidth();
+        int Height = binary_bitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = 0;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = binary_bitmap.getPixel(x, y);
+                int colorR = Color.red(pixelColor);
+                int colorG = Color.green(pixelColor);
+                int colorB = Color.blue(pixelColor);
+                int total = (colorR + colorG + colorB) / 3;
+                if (total == 0) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        String hex_to_string = byteArrayToHex(stream);
+        this.sendcommand(command);
+        this.sendcommand(hex_to_string.toUpperCase());
+        this.sendcommand("\r\n");
+    }
+
+    public void sendpicture_resize(int x_coordinates, int y_coordinates, String path, int resize_width, int resize_height) {
+        Bitmap original_bitmap = null;
+        Bitmap gray_bitmap = null;
+        Bitmap binary_bitmap = null;
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPurgeable = true;
+        options.inPreferredConfig = Config.ARGB_8888;
+        original_bitmap = BitmapFactory.decodeFile(path, options);
+        Bitmap resizedBitmap = Bitmap.createScaledBitmap(original_bitmap, resize_width, resize_height, false);
+        gray_bitmap = this.bitmap2Gray(resizedBitmap);
+        binary_bitmap = this.gray2Binary(gray_bitmap);
+        String x_axis = Integer.toString(x_coordinates);
+        String y_axis = Integer.toString(y_coordinates);
+        String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+        String picture_height = Integer.toString(binary_bitmap.getHeight());
+        String mode = Integer.toString(0);
+        String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+        byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+        int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+        int Width = binary_bitmap.getWidth();
+        int Height = binary_bitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = -1;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = binary_bitmap.getPixel(x, y);
+                int colorR = Color.red(pixelColor);
+                int colorG = Color.green(pixelColor);
+                int colorB = Color.blue(pixelColor);
+                int total = (colorR + colorG + colorB) / 3;
+                if (total == 0) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        this.sendcommand(command);
+        this.sendlargebyte(stream);
+        this.sendcommand("\r\n");
+    }
+
+    public void sendpicture_resize_halftone(int x_coordinates, int y_coordinates, String path, int resize_width, int resize_height) {
+        Bitmap original_bitmap = null;
+        Bitmap gray_bitmap = null;
+        Bitmap binary_bitmap = null;
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPurgeable = true;
+        options.inPreferredConfig = Config.ARGB_8888;
+        original_bitmap = BitmapFactory.decodeFile(path, options);
+        Bitmap resizedBitmap = Bitmap.createScaledBitmap(original_bitmap, resize_width, resize_height, false);
+        gray_bitmap = this.bitmap2Gray(resizedBitmap);
+        binary_bitmap = this.gray2halftone(gray_bitmap);
+        String x_axis = Integer.toString(x_coordinates);
+        String y_axis = Integer.toString(y_coordinates);
+        String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+        String picture_height = Integer.toString(binary_bitmap.getHeight());
+        String mode = Integer.toString(0);
+        String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+        byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+        int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+        int Width = binary_bitmap.getWidth();
+        int Height = binary_bitmap.getHeight();
+
+        for(int i = 0; i < Height * Width_bytes; ++i) {
+            stream[i] = -1;
+        }
+
+        for(int y = 0; y < Height; ++y) {
+            for(int x = 0; x < Width; ++x) {
+                int pixelColor = binary_bitmap.getPixel(x, y);
+                int colorR = Color.red(pixelColor);
+                int colorG = Color.green(pixelColor);
+                int colorB = Color.blue(pixelColor);
+                int total = (colorR + colorG + colorB) / 3;
+                if (total == 0) {
+                    stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                }
+            }
+        }
+
+        this.sendcommand(command);
+        this.sendlargebyte(stream);
+        this.sendcommand("\r\n");
+    }
+
+    public Bitmap bitmap2Gray(Bitmap bmSrc) {
+        int width = bmSrc.getWidth();
+        int height = bmSrc.getHeight();
+        Bitmap bmpGray = null;
+        bmpGray = Bitmap.createBitmap(width, height, Config.RGB_565);
+        Canvas c = new Canvas(bmpGray);
+        Paint paint = new Paint();
+        ColorMatrix cm = new ColorMatrix();
+        cm.setSaturation(0.0F);
+        ColorMatrixColorFilter f = new ColorMatrixColorFilter(cm);
+        paint.setColorFilter(f);
+        c.drawBitmap(bmSrc, 0.0F, 0.0F, paint);
+        return bmpGray;
+    }
+
+    public Bitmap lineGrey(Bitmap image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        Bitmap linegray = null;
+        linegray = image.copy(Config.ARGB_8888, true);
+
+        for(int i = 0; i < width; ++i) {
+            for(int j = 0; j < height; ++j) {
+                int col = image.getPixel(i, j);
+                int alpha = col & -16777216;
+                int red = (col & 16711680) >> 16;
+                int green = (col & '\uff00') >> 8;
+                int blue = col & 255;
+                red = (int)(1.1 * (double)red + (double)30.0F);
+                green = (int)(1.1 * (double)green + (double)30.0F);
+                blue = (int)(1.1 * (double)blue + (double)30.0F);
+                if (red >= 255) {
+                    red = 255;
+                }
+
+                if (green >= 255) {
+                    green = 255;
+                }
+
+                if (blue >= 255) {
+                    blue = 255;
+                }
+
+                int newColor = alpha | red << 16 | green << 8 | blue;
+                linegray.setPixel(i, j, newColor);
+            }
+        }
+
+        return linegray;
+    }
+
+    public Bitmap gray2Binary(Bitmap graymap) {
+        int width = graymap.getWidth();
+        int height = graymap.getHeight();
+        Bitmap binarymap = null;
+        binarymap = graymap.copy(Config.ARGB_8888, true);
+
+        for(int i = 0; i < width; ++i) {
+            for(int j = 0; j < height; ++j) {
+                int col = binarymap.getPixel(i, j);
+                int alpha = col & -16777216;
+                int red = (col & 16711680) >> 16;
+                int green = (col & '\uff00') >> 8;
+                int blue = col & 255;
+                int gray = (int)((double)((float)red) * 0.3 + (double)((float)green) * 0.59 + (double)((float)blue) * 0.11);
+                if (gray <= 127) {
+                    gray = 0;
+                } else {
+                    gray = 255;
+                }
+
+                int newColor = alpha | gray << 16 | gray << 8 | gray;
+                binarymap.setPixel(i, j, newColor);
+            }
+        }
+
+        return binarymap;
+    }
+
+    public Bitmap gray2Binary(Bitmap graymap, int threshold) {
+        int width = graymap.getWidth();
+        int height = graymap.getHeight();
+        Bitmap binarymap = null;
+        binarymap = graymap.copy(Config.ARGB_8888, true);
+
+        for(int i = 0; i < width; ++i) {
+            for(int j = 0; j < height; ++j) {
+                int col = binarymap.getPixel(i, j);
+                int alpha = col & -16777216;
+                int red = (col & 16711680) >> 16;
+                int green = (col & '\uff00') >> 8;
+                int blue = col & 255;
+                int gray = (int)((double)((float)red) * 0.3 + (double)((float)green) * 0.59 + (double)((float)blue) * 0.11);
+                if (gray <= threshold) {
+                    gray = 0;
+                } else {
+                    gray = 255;
+                }
+
+                int newColor = alpha | gray << 16 | gray << 8 | gray;
+                binarymap.setPixel(i, j, newColor);
+            }
+        }
+
+        return binarymap;
+    }
+
+    public Bitmap gray2halftone(Bitmap graymap) {
+        int width = graymap.getWidth();
+        int height = graymap.getHeight();
+        Bitmap binarymap = null;
+        binarymap = graymap.copy(Config.ARGB_8888, true);
+
+        for(int i = 0; i < width - 1; i += 2) {
+            for(int j = 0; j < height - 1; j += 2) {
+                int col = binarymap.getPixel(i, j);
+                int alpha = col & -16777216;
+                int red = (col & 16711680) >> 16;
+                int green = (col & '\uff00') >> 8;
+                int blue = col & 255;
+                int gray1 = (int)((double)((float)red) * 0.3 + (double)((float)green) * 0.59 + (double)((float)blue) * 0.11);
+                col = binarymap.getPixel(i + 1, j);
+                alpha = col & -16777216;
+                red = (col & 16711680) >> 16;
+                green = (col & '\uff00') >> 8;
+                blue = col & 255;
+                int gray2 = (int)((double)((float)red) * 0.3 + (double)((float)green) * 0.59 + (double)((float)blue) * 0.11);
+                col = binarymap.getPixel(i, j + 1);
+                alpha = col & -16777216;
+                red = (col & 16711680) >> 16;
+                green = (col & '\uff00') >> 8;
+                blue = col & 255;
+                int gray3 = (int)((double)((float)red) * 0.3 + (double)((float)green) * 0.59 + (double)((float)blue) * 0.11);
+                col = binarymap.getPixel(i + 1, j + 1);
+                alpha = col & -16777216;
+                red = (col & 16711680) >> 16;
+                green = (col & '\uff00') >> 8;
+                blue = col & 255;
+                int gray4 = (int)((double)((float)red) * 0.3 + (double)((float)green) * 0.59 + (double)((float)blue) * 0.11);
+                int helftone = 1020 - (gray1 + gray2 + gray3 + gray4);
+                int whiteColor = -1;
+                int blackColor = 0;
+                if (helftone <= 204) {
+                    binarymap.setPixel(i, j, whiteColor);
+                    binarymap.setPixel(i + 1, j, whiteColor);
+                    binarymap.setPixel(i, j + 1, whiteColor);
+                    binarymap.setPixel(i + 1, j + 1, whiteColor);
+                } else if (helftone <= 408) {
+                    binarymap.setPixel(i, j, whiteColor);
+                    binarymap.setPixel(i + 1, j, whiteColor);
+                    binarymap.setPixel(i, j + 1, whiteColor);
+                    binarymap.setPixel(i + 1, j + 1, blackColor);
+                } else if (helftone <= 612) {
+                    binarymap.setPixel(i, j, whiteColor);
+                    binarymap.setPixel(i + 1, j, blackColor);
+                    binarymap.setPixel(i, j + 1, blackColor);
+                    binarymap.setPixel(i + 1, j + 1, whiteColor);
+                } else if (helftone <= 816) {
+                    binarymap.setPixel(i, j, whiteColor);
+                    binarymap.setPixel(i + 1, j, blackColor);
+                    binarymap.setPixel(i, j + 1, blackColor);
+                    binarymap.setPixel(i + 1, j + 1, blackColor);
+                } else {
+                    binarymap.setPixel(i, j, blackColor);
+                    binarymap.setPixel(i + 1, j, blackColor);
+                    binarymap.setPixel(i, j + 1, blackColor);
+                    binarymap.setPixel(i + 1, j + 1, blackColor);
+                }
+            }
+        }
+
+        return binarymap;
+    }
+
+    public static String byteArrayToHex(byte[] a) {
+        StringBuilder sb = new StringBuilder(a.length * 2);
+
+        for(byte b : a) {
+            sb.append(String.format("%02x", b & 255));
+        }
+
+        return sb.toString();
+    }
+
+    private void asset_sendfile() {
+        AssetManager am = this.getAssets();
+
+        try {
+            InputStream is = am.open("123.txt");
+            int buffer_length = is.available();
+            byte[] buffer = new byte[buffer_length];
+            is.read(buffer, 0, buffer_length);
+            int test = 0;
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+    }
+
+    public String WiFi_Default() {
+        if (this.OutStream != null && this.InStream != null) {
+            byte[] message = new byte[]{27, 33, 82};
+            String default_command = "WLAN DEFAULT\r\n";
+            this.sendcommand(default_command);
+            this.sendcommand(message);
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String WiFi_SSID(String SSID) {
+        if (this.OutStream != null && this.InStream != null) {
+            String command = "WLAN SSID \"" + SSID + "\"\r\n";
+            this.sendcommand(command);
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String WiFi_WPA(String WPA) {
+        if (this.OutStream != null && this.InStream != null) {
+            String command = "WLAN WPA \"" + WPA + "\"\r\n";
+            this.sendcommand(command);
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String WiFi_WEP(int number, String WEP) {
+        if (this.OutStream != null && this.InStream != null) {
+            String command = "WLAN WEP " + Integer.toString(number) + "," + "\"" + WEP + "\"\r\n";
+            this.sendcommand(command);
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String WiFi_DHCP() {
+        if (this.OutStream != null && this.InStream != null) {
+            String command = "WLAN DHCP\r\n";
+            this.sendcommand(command);
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String WiFi_Port(int port) {
+        if (this.OutStream != null && this.InStream != null) {
+            String command = "WLAN PORT " + Integer.toString(port) + "\r\n";
+            this.sendcommand(command);
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String WiFi_StaticIP(String ip, String mask, String gateway) {
+        if (this.OutStream != null && this.InStream != null) {
+            String command = "WLAN IP \"" + ip + "\"" + "," + "\"" + mask + "\"" + "," + "\"" + gateway + "\"\r\n";
+            this.sendcommand(command);
+            return "1";
+        } else {
+            return "-1";
+        }
+    }
+
+    public String NFC_Read_data(int delay) {
+        this.sendcommand("NFC MODE OFF\r\n");
+        this.sendcommand("NFC READ\r\n");
+
+        try {
+            Thread.sleep((long)delay);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            if (this.InStream.available() > 0) {
+                int e = this.InStream.read(readBuf);
+            }
+        } catch (IOException var4) {
+            return "-1";
+        }
+
+        String nfcdata = new String(readBuf);
+        return nfcdata;
+    }
+
+    public int NFC_Write_data(String data) {
+        this.sendcommand("NFC MODE OFF\r\n");
+        this.sendcommand("NFC WRITE \"" + data + "\"" + "\r\n");
+        return 1;
+    }
+
+    public int NFC_Timeout(int delay) {
+        this.sendcommand("NFC TIMEOUT " + delay + "\r\n");
+        return 1;
+    }
+
+    public ArrayList<Bitmap> pdf_color(int x_axis, int y_axis, File f1) throws FileNotFoundException {
+        ArrayList<Bitmap> bitmaps = new ArrayList();
+
+        try {
+            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(f1, 268435456));
+            int pageCount = renderer.getPageCount();
+            int t = 0;
+            if (t < pageCount) {
+                PdfRenderer.Page page = renderer.openPage(t);
+                int width = (int)((double)(page.getWidth() * 72) / 25.4);
+                int height = (int)((double)(page.getHeight() * 72) / 25.4);
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                page.render(bitmap, (Rect)null, (Matrix)null, 1);
+                bitmaps.add(bitmap);
+                page.close();
+                renderer.close();
+                Bitmap gray_bitmap = null;
+                Bitmap binary_bitmap = null;
+                Paint paint = new Paint();
+                paint.setStyle(Style.FILL);
+                paint.setColor(-16777216);
+                paint.setAntiAlias(true);
+                gray_bitmap = this.bitmap2Gray(bitmap);
+                binary_bitmap = this.gray2Binary(gray_bitmap);
+                String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+                String picture_height = Integer.toString(binary_bitmap.getHeight());
+                String mode = Integer.toString(0);
+                String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+                byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+                int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+                int Width = binary_bitmap.getWidth();
+                int Height = binary_bitmap.getHeight();
+
+                for(int i = 0; i < Height * Width_bytes; ++i) {
+                    stream[i] = -1;
+                }
+
+                for(int y = 0; y < Height; ++y) {
+                    for(int x = 0; x < Width; ++x) {
+                        int pixelColor = binary_bitmap.getPixel(x, y);
+                        int colorR = Color.red(pixelColor);
+                        int colorG = Color.green(pixelColor);
+                        int colorB = Color.blue(pixelColor);
+                        int total = (colorR + colorG + colorB) / 3;
+                        if (total == 0) {
+                            stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                        }
+                    }
+                }
+
+                this.sendcommand(command);
+                this.sendlargebyte(stream);
+                this.sendcommand("\r\n");
+                return bitmaps;
+            }
+
+            renderer.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return bitmaps;
+    }
+
+    public ArrayList<Bitmap> pdf_color_resize(int x_axis, int y_axis, File f1, int resize_width, int resize_height) throws FileNotFoundException {
+        ArrayList<Bitmap> bitmaps = new ArrayList();
+
+        try {
+            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(f1, 268435456));
+            int pageCount = renderer.getPageCount();
+            int t = 0;
+            if (t < pageCount) {
+                PdfRenderer.Page page = renderer.openPage(t);
+                int width = (int)((double)(page.getWidth() * 72) / 25.4);
+                int height = (int)((double)(page.getHeight() * 72) / 25.4);
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                Bitmap resize_bitmap = Bitmap.createScaledBitmap(bitmap, resize_width, resize_height, false);
+                page.render(resize_bitmap, (Rect)null, (Matrix)null, 1);
+                bitmaps.add(resize_bitmap);
+                page.close();
+                renderer.close();
+                Bitmap gray_bitmap = null;
+                Bitmap binary_bitmap = null;
+                Paint paint = new Paint();
+                paint.setStyle(Style.FILL);
+                paint.setColor(-16777216);
+                paint.setAntiAlias(true);
+                gray_bitmap = this.bitmap2Gray(resize_bitmap);
+                binary_bitmap = this.gray2Binary(gray_bitmap);
+                String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+                String picture_height = Integer.toString(binary_bitmap.getHeight());
+                String mode = Integer.toString(0);
+                String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+                byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+                int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+                int Width = binary_bitmap.getWidth();
+                int Height = binary_bitmap.getHeight();
+
+                for(int i = 0; i < Height * Width_bytes; ++i) {
+                    stream[i] = -1;
+                }
+
+                for(int y = 0; y < Height; ++y) {
+                    for(int x = 0; x < Width; ++x) {
+                        int pixelColor = binary_bitmap.getPixel(x, y);
+                        int colorA = Color.alpha(pixelColor);
+                        int colorR = Color.red(pixelColor);
+                        int colorG = Color.green(pixelColor);
+                        int colorB = Color.blue(pixelColor);
+                        int total = (colorR + colorG + colorB) / 3;
+                        if (total == 0) {
+                            stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                        }
+                    }
+                }
+
+                this.sendcommand(command);
+                this.sendlargebyte(stream);
+                this.sendcommand("\r\n");
+                return bitmaps;
+            }
+
+            renderer.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return bitmaps;
+    }
+
+    public ArrayList<Bitmap> pdf_color_save(int x_axis, int y_axis, File f1) throws FileNotFoundException {
+        ArrayList<Bitmap> bitmaps = new ArrayList();
+
+        try {
+            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(f1, 268435456));
+            int pageCount = renderer.getPageCount();
+            int t = 0;
+            if (t < pageCount) {
+                PdfRenderer.Page page = renderer.openPage(t);
+                int width = (int)((double)(page.getWidth() * 72) / 25.4);
+                int height = (int)((double)(page.getHeight() * 72) / 25.4);
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                page.render(bitmap, (Rect)null, (Matrix)null, 1);
+                bitmaps.add(bitmap);
+                page.close();
+                Bitmap gray_bitmap = null;
+                Bitmap binary_bitmap = null;
+                Paint paint = new Paint();
+                paint.setStyle(Style.FILL);
+                paint.setColor(-16777216);
+                paint.setAntiAlias(true);
+                gray_bitmap = this.bitmap2Gray(bitmap);
+                binary_bitmap = this.gray2Binary(gray_bitmap);
+                String picture_wdith = Integer.toString((binary_bitmap.getWidth() + 7) / 8);
+                String picture_height = Integer.toString(binary_bitmap.getHeight());
+                String mode = Integer.toString(0);
+                String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+                byte[] stream = new byte[(binary_bitmap.getWidth() + 7) / 8 * binary_bitmap.getHeight()];
+                int Width_bytes = (binary_bitmap.getWidth() + 7) / 8;
+                int Width = binary_bitmap.getWidth();
+                int Height = binary_bitmap.getHeight();
+
+                for(int i = 0; i < Height * Width_bytes; ++i) {
+                    stream[i] = -1;
+                }
+
+                for(int y = 0; y < Height; ++y) {
+                    for(int x = 0; x < Width; ++x) {
+                        int pixelColor = binary_bitmap.getPixel(x, y);
+                        int colorA = Color.alpha(pixelColor);
+                        int colorR = Color.red(pixelColor);
+                        int colorG = Color.green(pixelColor);
+                        int colorB = Color.blue(pixelColor);
+                        int total = (colorR + colorG + colorB) / 3;
+                        if (total == 0) {
+                            stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                        }
+                    }
+                }
+
+                String filename = "document.txt";
+                File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                File outfile = new File(sdcard, filename);
+                FileOutputStream outStream = new FileOutputStream(outfile);
+                byte[] bytes1 = command.getBytes(StandardCharsets.US_ASCII);
+                byte[] bytes2 = "\r\n".getBytes(StandardCharsets.US_ASCII);
+                outStream.write(bytes1);
+                outStream.write(stream);
+                outStream.write(bytes2);
+                outStream.close();
+                return bitmaps;
+            }
+
+            renderer.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return bitmaps;
+    }
+
+    public ArrayList<Bitmap> pdf_gray(int x_axis, int y_axis, File f1) throws FileNotFoundException {
+        ArrayList<Bitmap> bitmaps = new ArrayList();
+
+        try {
+            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(f1, 268435456));
+            int pageCount = renderer.getPageCount();
+            int t = 0;
+            if (t < pageCount) {
+                PdfRenderer.Page page = renderer.openPage(t);
+                int width = (int)((double)(page.getWidth() * 72) / 25.4);
+                int height = (int)((double)(page.getHeight() * 72) / 25.4);
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                page.render(bitmap, (Rect)null, (Matrix)null, 2);
+                bitmaps.add(bitmap);
+                page.close();
+                renderer.close();
+                Bitmap gray_bitmap = null;
+                Bitmap binary_bitmap = null;
+                Paint paint = new Paint();
+                paint.setStyle(Style.FILL);
+                paint.setColor(-16777216);
+                paint.setAntiAlias(true);
+                binary_bitmap = bitmap;
+                String picture_wdith = Integer.toString((bitmap.getWidth() + 7) / 8);
+                String picture_height = Integer.toString(bitmap.getHeight());
+                String mode = Integer.toString(0);
+                String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+                byte[] stream = new byte[(bitmap.getWidth() + 7) / 8 * bitmap.getHeight()];
+                int Width_bytes = (bitmap.getWidth() + 7) / 8;
+                int Width = bitmap.getWidth();
+                int Height = bitmap.getHeight();
+
+                for(int i = 0; i < Height * Width_bytes; ++i) {
+                    stream[i] = -1;
+                }
+
+                for(int y = 0; y < Height; ++y) {
+                    for(int x = 0; x < Width; ++x) {
+                        int pixelColor = binary_bitmap.getPixel(x, y);
+                        int colorA = Color.alpha(pixelColor);
+                        int colorR = Color.red(pixelColor);
+                        int colorG = Color.green(pixelColor);
+                        int colorB = Color.blue(pixelColor);
+                        int total = (colorR + colorG + colorB) / 3;
+                        if (colorA != 0) {
+                            stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                        }
+                    }
+                }
+
+                this.sendcommand(command);
+                this.sendlargebyte(stream);
+                this.sendcommand("\r\n");
+                return bitmaps;
+            }
+
+            renderer.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return bitmaps;
+    }
+
+    public ArrayList<Bitmap> pdf_gray_resize(int x_axis, int y_axis, File f1, int resize_width, int resize_height) throws FileNotFoundException {
+        ArrayList<Bitmap> bitmaps = new ArrayList();
+
+        try {
+            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(f1, 268435456));
+            int pageCount = renderer.getPageCount();
+            int t = 0;
+            if (t < pageCount) {
+                PdfRenderer.Page page = renderer.openPage(t);
+                int width = (int)((double)(page.getWidth() * 72) / 25.4);
+                int height = (int)((double)(page.getHeight() * 72) / 25.4);
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                Bitmap resize_bitmap = Bitmap.createScaledBitmap(bitmap, resize_width, resize_height, false);
+                page.render(resize_bitmap, (Rect)null, (Matrix)null, 1);
+                bitmaps.add(resize_bitmap);
+                page.close();
+                renderer.close();
+                Bitmap gray_bitmap = null;
+                Bitmap binary_bitmap = null;
+                Paint paint = new Paint();
+                paint.setStyle(Style.FILL);
+                paint.setColor(-16777216);
+                paint.setAntiAlias(true);
+                binary_bitmap = resize_bitmap;
+                String picture_wdith = Integer.toString((resize_bitmap.getWidth() + 7) / 8);
+                String picture_height = Integer.toString(resize_bitmap.getHeight());
+                String mode = Integer.toString(0);
+                String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+                byte[] stream = new byte[(resize_bitmap.getWidth() + 7) / 8 * resize_bitmap.getHeight()];
+                int Width_bytes = (resize_bitmap.getWidth() + 7) / 8;
+                int Width = resize_bitmap.getWidth();
+                int Height = resize_bitmap.getHeight();
+
+                for(int i = 0; i < Height * Width_bytes; ++i) {
+                    stream[i] = -1;
+                }
+
+                for(int y = 0; y < Height; ++y) {
+                    for(int x = 0; x < Width; ++x) {
+                        int pixelColor = binary_bitmap.getPixel(x, y);
+                        int colorA = Color.alpha(pixelColor);
+                        int colorR = Color.red(pixelColor);
+                        int colorG = Color.green(pixelColor);
+                        int colorB = Color.blue(pixelColor);
+                        int total = (colorR + colorG + colorB) / 3;
+                        if (colorA != 0) {
+                            stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                        }
+                    }
+                }
+
+                this.sendcommand(command);
+                this.sendlargebyte(stream);
+                this.sendcommand("\r\n");
+                return bitmaps;
+            }
+
+            renderer.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return bitmaps;
+    }
+
+    public ArrayList<Bitmap> pdf_gray_save(int x_axis, int y_axis, File f1) throws FileNotFoundException {
+        ArrayList<Bitmap> bitmaps = new ArrayList();
+
+        try {
+            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(f1, 268435456));
+            int pageCount = renderer.getPageCount();
+            int t = 0;
+            if (t < pageCount) {
+                PdfRenderer.Page page = renderer.openPage(t);
+                int width = (int)((double)(page.getWidth() * 72) / 25.4);
+                int height = (int)((double)(page.getHeight() * 72) / 25.4);
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                page.render(bitmap, (Rect)null, (Matrix)null, 1);
+                bitmaps.add(bitmap);
+                page.close();
+                renderer.close();
+                Bitmap gray_bitmap = null;
+                Bitmap binary_bitmap = null;
+                Paint paint = new Paint();
+                paint.setStyle(Style.FILL);
+                paint.setColor(-16777216);
+                paint.setAntiAlias(true);
+                binary_bitmap = bitmap;
+                String picture_wdith = Integer.toString((bitmap.getWidth() + 7) / 8);
+                String picture_height = Integer.toString(bitmap.getHeight());
+                String mode = Integer.toString(0);
+                String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+                byte[] stream = new byte[(bitmap.getWidth() + 7) / 8 * bitmap.getHeight()];
+                int Width_bytes = (bitmap.getWidth() + 7) / 8;
+                int Width = bitmap.getWidth();
+                int Height = bitmap.getHeight();
+
+                for(int i = 0; i < Height * Width_bytes; ++i) {
+                    stream[i] = -1;
+                }
+
+                for(int y = 0; y < Height; ++y) {
+                    for(int x = 0; x < Width; ++x) {
+                        int pixelColor = binary_bitmap.getPixel(x, y);
+                        int colorA = Color.alpha(pixelColor);
+                        int colorR = Color.red(pixelColor);
+                        int colorG = Color.green(pixelColor);
+                        int colorB = Color.blue(pixelColor);
+                        int total = (colorR + colorG + colorB) / 3;
+                        if (colorA != 0) {
+                            stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                        }
+                    }
+                }
+
+                String filename = "document.txt";
+                File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                File outfile = new File(sdcard, filename);
+                FileOutputStream outStream = new FileOutputStream(outfile);
+                byte[] bytes1 = command.getBytes(StandardCharsets.US_ASCII);
+                byte[] bytes2 = "\r\n".getBytes(StandardCharsets.US_ASCII);
+                outStream.write(bytes1);
+                outStream.write(stream);
+                outStream.write(bytes2);
+                outStream.close();
+                return bitmaps;
+            }
+
+            renderer.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return bitmaps;
+    }
+
+    public ArrayList<Bitmap> pdf_gray_print_resize2fitWidth(int x_axis, int y_axis, File f1, int resize_width) throws FileNotFoundException {
+        ArrayList<Bitmap> bitmaps = new ArrayList();
+
+        try {
+            PdfRenderer renderer = new PdfRenderer(ParcelFileDescriptor.open(f1, 268435456));
+            int pageCount = renderer.getPageCount();
+
+            for(int t = 0; t < pageCount; ++t) {
+                PdfRenderer.Page page = renderer.openPage(t);
+                int width = (int)((double)(page.getWidth() * 72) / 25.4);
+                int height = (int)((double)(page.getHeight() * 72) / 25.4);
+                int resize_height = resize_width * height / width;
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                Bitmap resize_bitmap = Bitmap.createScaledBitmap(bitmap, resize_width, resize_height, false);
+                page.render(resize_bitmap, (Rect)null, (Matrix)null, 1);
+                bitmaps.add(resize_bitmap);
+                page.close();
+                Bitmap gray_bitmap = null;
+                Bitmap binary_bitmap = null;
+                Paint paint = new Paint();
+                paint.setStyle(Style.FILL);
+                paint.setColor(-16777216);
+                paint.setAntiAlias(true);
+                binary_bitmap = resize_bitmap;
+                String picture_wdith = Integer.toString((resize_bitmap.getWidth() + 7) / 8);
+                String picture_height = Integer.toString(resize_bitmap.getHeight());
+                String mode = Integer.toString(0);
+                String command = "BITMAP " + x_axis + "," + y_axis + "," + picture_wdith + "," + picture_height + "," + mode + ",";
+                byte[] stream = new byte[(resize_bitmap.getWidth() + 7) / 8 * resize_bitmap.getHeight()];
+                int Width_bytes = (resize_bitmap.getWidth() + 7) / 8;
+                int Width = resize_bitmap.getWidth();
+                int Height = resize_bitmap.getHeight();
+
+                for(int i = 0; i < Height * Width_bytes; ++i) {
+                    stream[i] = -1;
+                }
+
+                for(int y = 0; y < Height; ++y) {
+                    for(int x = 0; x < Width; ++x) {
+                        int pixelColor = binary_bitmap.getPixel(x, y);
+                        int colorA = Color.alpha(pixelColor);
+                        int colorR = Color.red(pixelColor);
+                        int colorG = Color.green(pixelColor);
+                        int colorB = Color.blue(pixelColor);
+                        int total = (colorR + colorG + colorB) / 3;
+                        if (colorA != 0) {
+                            stream[y * ((Width + 7) / 8) + x / 8] ^= (byte)(128 >> x % 8);
+                        }
+                    }
+                }
+
+                this.sendcommand("SIZE " + resize_width + " dot, " + resize_height + " dot\r\nCLS\r\n");
+                this.sendcommand(command);
+                this.sendlargebyte(stream);
+                this.sendcommand("\r\nPRINT 1\r\n");
+            }
+
+            renderer.close();
+            return bitmaps;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return bitmaps;
+        }
+    }
+
+    public String smartbattery_status(int index) {
+        this.sendcommand_getstring("DIAGNOSTIC INTERFACE COM\r\n");
+        String smb_info = "-1";
+        switch (index) {
+            case 0:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBSERIAL\r\n");
+                break;
+            case 1:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBVOLTAGE\r\n");
+                break;
+            case 2:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBREMCAPCITY\r\n");
+                break;
+            case 3:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBTEMPERATURE\r\n");
+                break;
+            case 4:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBDISCYCLE\r\n");
+                break;
+            case 5:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBMANUDATE\r\n");
+                break;
+            case 6:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBREPLACECOUNT\r\n");
+                break;
+            case 7:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBLIFE\r\n");
+                break;
+            case 8:
+                smb_info = this.sendcommand_getstring("DIAGNOSTIC REPORT SMBSOH\r\n");
+        }
+
+        return !smb_info.equals("") && smb_info.contains("{") ? smb_info.substring(smb_info.indexOf(124) + 1, smb_info.lastIndexOf(125)) : "-1";
+    }
+
+    public String printPDFbyPath(String filename, int x_coordinates, int y_coordinates, int printer_dpi) {
+        try {
+            File file = new File(Environment.getExternalStorageDirectory().getPath() + "/Download/" + filename);
+            if (!filename.toLowerCase().endsWith(".pdf")) {
+                return "-1";
+            } else {
+                PdfRenderer mPdfRenderer = new PdfRenderer(ParcelFileDescriptor.open(file, 268435456));
+                int PageCount = mPdfRenderer.getPageCount();
+
+                for(int idx = 0; idx < PageCount; ++idx) {
+                    PdfRenderer.Page page = mPdfRenderer.openPage(idx);
+                    int width = page.getWidth() * printer_dpi / 72;
+                    int height = page.getHeight() * printer_dpi / 72;
+                    Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                    Canvas canvas = new Canvas(bitmap);
+                    canvas.drawColor(-1);
+                    canvas.drawBitmap(bitmap, 0.0F, 0.0F, (Paint)null);
+                    page.render(bitmap, new Rect(0, 0, width, height), (Matrix)null, 1);
+                    page.close();
+                    this.sendcommand("CLS\r\n");
+                    this.sendbitmap(x_coordinates, y_coordinates, bitmap);
+                    Thread.sleep(1000L);
+                    this.sendcommand("PRINT 1\r\n");
+                    bitmap.recycle();
+                }
+
+                mPdfRenderer.close();
+                return "1";
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "-1";
+        }
+    }
+
+    public String printPDFbyPath(String filename, int x_coordinates, int y_coordinates, int printer_dpi, int page_index) {
+        try {
+            File file = new File(Environment.getExternalStorageDirectory().getPath() + "/Download/" + filename);
+            if (filename.toLowerCase().endsWith(".pdf")) {
+                PdfRenderer mPdfRenderer = new PdfRenderer(ParcelFileDescriptor.open(file, 268435456));
+                int PageCount = mPdfRenderer.getPageCount();
+                int idx = page_index - 1;
+                if (idx >= 0 && idx < PageCount) {
+                    PdfRenderer.Page page = mPdfRenderer.openPage(idx);
+                    int width = page.getWidth() * printer_dpi / 72;
+                    int height = page.getHeight() * printer_dpi / 72;
+                    Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                    Canvas canvas = new Canvas(bitmap);
+                    canvas.drawColor(-1);
+                    canvas.drawBitmap(bitmap, 0.0F, 0.0F, (Paint)null);
+                    page.render(bitmap, new Rect(0, 0, width, height), (Matrix)null, 1);
+                    page.close();
+                    this.sendcommand("CLS\r\n");
+                    this.sendbitmap(x_coordinates, y_coordinates, bitmap);
+                    Thread.sleep(1000L);
+                    this.sendcommand("PRINT 1\r\n");
+                    bitmap.recycle();
+                }
+
+                mPdfRenderer.close();
+                return "1";
+            } else {
+                return "-1";
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "-1";
+        }
+    }
+
+    public int getPDFPageCountbyPath(String filename) {
+        try {
+            File file = new File(Environment.getExternalStorageDirectory().getPath() + "/Download/" + filename);
+            if (filename.toLowerCase().endsWith(".pdf")) {
+                PdfRenderer mPdfRenderer = new PdfRenderer(ParcelFileDescriptor.open(file, 268435456));
+                int PageCount = mPdfRenderer.getPageCount();
+                mPdfRenderer.close();
+                return PageCount;
+            } else {
+                return -1;
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return -1;
+        }
+    }
+
+    public String printPDFbyPath(Context ctx, Uri uri, int x_coordinates, int y_coordinates, int printer_dpi) {
+        try {
+            PdfRenderer mPdfRenderer = new PdfRenderer(ctx.getContentResolver().openFileDescriptor(uri, "r"));
+            int PageCount = mPdfRenderer.getPageCount();
+
+            for(int idx = 0; idx < PageCount; ++idx) {
+                PdfRenderer.Page page = mPdfRenderer.openPage(idx);
+                int width = page.getWidth() * printer_dpi / 72;
+                int height = page.getHeight() * printer_dpi / 72;
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                Canvas canvas = new Canvas(bitmap);
+                canvas.drawColor(-1);
+                canvas.drawBitmap(bitmap, 0.0F, 0.0F, (Paint)null);
+                page.render(bitmap, new Rect(0, 0, width, height), (Matrix)null, 1);
+                page.close();
+                this.sendcommand("CLS\r\n");
+                this.sendbitmap(x_coordinates, y_coordinates, bitmap);
+                Thread.sleep(1000L);
+                this.sendcommand("PRINT 1\r\n");
+                bitmap.recycle();
+            }
+
+            mPdfRenderer.close();
+            return "1";
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "-1";
+        }
+    }
+
+    public String printPDFbyPath(Context ctx, Uri uri, int x_coordinates, int y_coordinates, int printer_dpi, int page_index) {
+        try {
+            PdfRenderer mPdfRenderer = new PdfRenderer(ctx.getContentResolver().openFileDescriptor(uri, "r"));
+            int PageCount = mPdfRenderer.getPageCount();
+            int idx = page_index - 1;
+            if (idx >= 0 && idx < PageCount) {
+                PdfRenderer.Page page = mPdfRenderer.openPage(idx);
+                int width = page.getWidth() * printer_dpi / 72;
+                int height = page.getHeight() * printer_dpi / 72;
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                Canvas canvas = new Canvas(bitmap);
+                canvas.drawColor(-1);
+                canvas.drawBitmap(bitmap, 0.0F, 0.0F, (Paint)null);
+                page.render(bitmap, new Rect(0, 0, width, height), (Matrix)null, 1);
+                page.close();
+                this.sendcommand("CLS\r\n");
+                this.sendbitmap(x_coordinates, y_coordinates, bitmap);
+                Thread.sleep(1000L);
+                this.sendcommand("PRINT 1\r\n");
+                bitmap.recycle();
+            }
+
+            mPdfRenderer.close();
+            return "1";
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "-1";
+        }
+    }
+
+    public int getPDFPageCountbyPath(Context ctx, Uri uri) {
+        try {
+            PdfRenderer mPdfRenderer = new PdfRenderer(ctx.getContentResolver().openFileDescriptor(uri, "r"));
+            int PageCount = mPdfRenderer.getPageCount();
+            mPdfRenderer.close();
+            return PageCount;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return -1;
+        }
+    }
+
+    public String printPDFbyFile(File file, int x_coordinates, int y_coordinates, int printer_dpi) {
+        try {
+            PdfRenderer mPdfRenderer = new PdfRenderer(ParcelFileDescriptor.open(file, 268435456));
+            int PageCount = mPdfRenderer.getPageCount();
+
+            for(int idx = 0; idx < PageCount; ++idx) {
+                PdfRenderer.Page page = mPdfRenderer.openPage(idx);
+                int width = page.getWidth() * printer_dpi / 72;
+                int height = page.getHeight() * printer_dpi / 72;
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                Canvas canvas = new Canvas(bitmap);
+                canvas.drawColor(-1);
+                canvas.drawBitmap(bitmap, 0.0F, 0.0F, (Paint)null);
+                page.render(bitmap, new Rect(0, 0, width, height), (Matrix)null, 1);
+                page.close();
+                this.sendcommand("CLS\r\n");
+                this.sendbitmap(x_coordinates, y_coordinates, bitmap);
+                Thread.sleep(1000L);
+                this.sendcommand("PRINT 1\r\n");
+                bitmap.recycle();
+            }
+
+            mPdfRenderer.close();
+            return "1";
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "-1";
+        }
+    }
+
+    public String printPDFbyFile(File file, int x_coordinates, int y_coordinates, int printer_dpi, int page_index) {
+        try {
+            PdfRenderer mPdfRenderer = new PdfRenderer(ParcelFileDescriptor.open(file, 268435456));
+            int PageCount = mPdfRenderer.getPageCount();
+            int idx = page_index - 1;
+            if (idx >= 0 && idx < PageCount) {
+                PdfRenderer.Page page = mPdfRenderer.openPage(idx);
+                int width = page.getWidth() * printer_dpi / 72;
+                int height = page.getHeight() * printer_dpi / 72;
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+                Canvas canvas = new Canvas(bitmap);
+                canvas.drawColor(-1);
+                canvas.drawBitmap(bitmap, 0.0F, 0.0F, (Paint)null);
+                page.render(bitmap, new Rect(0, 0, width, height), (Matrix)null, 1);
+                page.close();
+                this.sendcommand("CLS\r\n");
+                this.sendbitmap(x_coordinates, y_coordinates, bitmap);
+                Thread.sleep(1000L);
+                this.sendcommand("PRINT 1\r\n");
+                bitmap.recycle();
+            }
+
+            mPdfRenderer.close();
+            return "1";
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "-1";
+        }
+    }
+
+    public int getPDFPageCountbyFile(File file) {
+        try {
+            PdfRenderer mPdfRenderer = new PdfRenderer(ParcelFileDescriptor.open(file, 268435456));
+            int PageCount = mPdfRenderer.getPageCount();
+            mPdfRenderer.close();
+            return PageCount;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return -1;
+        }
+    }
+
+    public String SendPrinterFW(Context ctx, Uri uri) {
+        if (this.OutStream == null || this.InStream == null) {
+            if (this.OutStream == null) {
+                Log.e("THINBTCLIENT", "OutputStream is null\r\n");
+                return "-1";
+            }
+
+            if (this.InStream == null) {
+                Log.e("THINBTCLIENT", "InputStream is null\r\n");
+                return "-1";
+            }
+        }
+
+        try {
+            InputStream fis = ctx.getContentResolver().openInputStream(uri);
+            byte[] data = new byte[fis.available()];
+            int[] FF = new int[data.length];
+            byte[] DisableESC = new byte[]{27, 33, 68};
+
+            while(fis.read(data) != -1) {
+            }
+
+            this.OutStream.write(DisableESC);
+            this.OutStream.write(data);
+            this.OutStream.flush();
+            fis.close();
+        } catch (Exception e) {
+            Log.e("THINBTCLIENT", "Exception during write\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        try {
+            Thread.sleep(100L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return "1";
+    }
+
+    public String printerSN() {
+        if (this.OutStream == null || this.InStream == null) {
+            if (this.OutStream == null) {
+                Log.e("THINBTCLIENT", "OutputStream is null\r\n");
+                return "-1";
+            }
+
+            if (this.InStream == null) {
+                Log.e("THINBTCLIENT", "InputStream is null\r\n");
+                return "-1";
+            }
+        }
+
+        try {
+            String cmd = "OUT GETSETTING$(\"SYSTEM\",\"INFORMATION\",\"SERIAL\")\r\n";
+            byte[] cmd_byte = cmd.getBytes("UTF-8");
+            this.OutStream.write(cmd_byte);
+        } catch (IOException e) {
+            Log.e("THINBTCLIENT", "Exception during write\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        try {
+            Thread.sleep(300L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        readBuf = new byte[1024];
+
+        try {
+            while(this.InStream.available() > 0) {
+                int e = this.InStream.read(readBuf);
+            }
+        } catch (Exception e) {
+            Log.e("THINBTCLIENT", "Exception during read\r\n");
+            e.printStackTrace();
+            return "-1";
+        }
+
+        String SN = new String(readBuf, StandardCharsets.US_ASCII);
+        return SN;
+    }
+}
