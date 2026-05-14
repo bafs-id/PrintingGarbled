@@ -1,25 +1,47 @@
-# PrintingGarbled
+# Printing Issues
 
-A minimal Android app to reproduce **garbled printing issues** when using the TSC Printer SDK (`tscsdk.jar`) to print PDF files via Bluetooth on the **TSC Alpha-40L** printer.
+A minimal Android app to reproduce **two printing issues** when using the TSC Printer SDK (`tscsdk.jar`) to print PDF files via Bluetooth on the **TSC Alpha-40L** printer:
 
-This project is intended for the **TSC Printer dev team** to reproduce and diagnose the issue.
+1. **Garbled output** — see [ISSUE_REPORT_GARBLED.md](ISSUE_REPORT_GARBLED.md)
+2. **Blank page** — see [ISSUE_REPORT_BLANK_PAGE.md](ISSUE_REPORT_BLANK_PAGE.md)
 
-## Problem Description
+This project is intended for the **TSC Printer dev team** to reproduce and diagnose both issues.
+
+## Problem 1: Garbled Output
 
 When printing certain PDF files using `TSCActivity.printPDFbyFile()` on the **TSC Alpha-40L**, the output is garbled/corrupted. The issue is intermittent — some PDFs print correctly while others do not.
 
-## Test PDF Files
+## Problem 2: Blank Page
 
-The `app/src/main/assets/` folder contains 6 test PDFs:
+A separate, more recent issue. When printing the affected PDF, the failure happens in a specific **two-tap pattern** (the user must tap the Print button **twice**):
 
-| File                                  | Result              |
-| ------------------------------------- | ------------------- |
-| `1772170565703_250646575 - Pass.pdf`  | ✅ Prints correctly |
-| `1772172257369_250846099 - Pass.pdf`  | ✅ Prints correctly |
-| `1772172361576_250050845 - Pass.pdf`  | ✅ Prints correctly |
-| `1772172626834_250033423 - Fail.pdf`  | ❌ Garbled output   |
-| `1772172993599_250313201 - Fail.pdf`  | ❌ Garbled output   |
-| `1772173144558_250448540 - Fail.pdf`  | ❌ Garbled output   |
+1. **Tap Print (1st time) — nothing happens.** The SDK call returns but the printer does **not** feed any paper. No output, no error.
+2. **Tap Print (2nd time) — blank page is fed.** The printer feeds a page, but the page comes out **completely blank** (no content at all).
+
+**This pattern is 100% consistent for this PDF — the first tap never prints, the second tap always feeds a blank page.** It is not intermittent.
+
+**The issue also reproduces on every TSC Alpha-40L printer unit we have tested**, so it is not a single faulty hardware unit — it points at the SDK or firmware.
+
+The Bluetooth connection check succeeds before each tap, so the connection itself is not the problem. See [ISSUE_REPORT_BLANK_PAGE.md](ISSUE_REPORT_BLANK_PAGE.md) for the full report.
+
+### Blank Page Test PDF
+
+| File                                  | Result        |
+| ------------------------------------- | ------------- |
+| `1778666792328_260680042 - Blank.pdf` | ⚠️ Blank page |
+
+## Garbled Test PDF Files
+
+The `app/src/main/assets/` folder contains 6 test PDFs for the garbled-output issue:
+
+| File                                 | Result              |
+| ------------------------------------ | ------------------- |
+| `1772170565703_250646575 - Pass.pdf` | ✅ Prints correctly |
+| `1772172257369_250846099 - Pass.pdf` | ✅ Prints correctly |
+| `1772172361576_250050845 - Pass.pdf` | ✅ Prints correctly |
+| `1772172626834_250033423 - Fail.pdf` | ❌ Garbled output   |
+| `1772172993599_250313201 - Fail.pdf` | ❌ Garbled output   |
+| `1772173144558_250448540 - Fail.pdf` | ❌ Garbled output   |
 
 ## Print Results
 
@@ -108,13 +130,22 @@ Or from terminal:
 
 Then launch **"Printing Garbled"** from the device's app drawer.
 
-### Step 6: Reproduce the Issue
+### Step 6: Reproduce the Issues
 
 1. Enter the printer's **Bluetooth MAC address** (e.g. `00:11:22:33:44:55`).
 2. Tap **Check Status** to verify the connection — status should show "Connected OK".
+
+**Garbled output (Problem 1):**
+
 3. Select a **Fail** PDF from the dropdown and tap **Print Selected** to see the garbled output.
 4. Select a **Pass** PDF and tap **Print Selected** to see correct output for comparison.
-5. Tap **Print All** to print all 6 PDFs in sequence.
+5. Tap **Print All** to print all PDFs in sequence.
+
+**Blank page (Problem 2):**
+
+6. Select the **Blank** PDF (`1778666792328_260680042 - Blank.pdf`) from the dropdown.
+7. Tap **Print Selected** once — observe that **no paper is fed** from the printer.
+8. Tap **Print Selected** again — observe that the printer feeds a **completely blank** page.
 
 ### Permissions
 
@@ -160,7 +191,8 @@ PrintingGarbled/
 │       ├── AndroidManifest.xml
 │       ├── assets/
 │       │   ├── *Pass.pdf            ← PDFs that print correctly
-│       │   └── *Fail.pdf            ← PDFs that print garbled
+│       │   ├── *Fail.pdf            ← PDFs that print garbled
+│       │   └── *Blank.pdf           ← PDFs that print blank (Problem 2)
 │       ├── java/.../MainActivity.kt ← Main activity with print logic
 │       └── res/layout/activity_main.xml
 ├── gradle/
@@ -176,6 +208,6 @@ PrintingGarbled/
 - **Gradle:** 8.13 / **AGP:** 8.11.2
 - **TSC SDK:** `tscsdk.jar` (`com.example.tscdll.TSCActivity`)
 - **Printer:** TSC Alpha-40L
-- **Printer Firmware:** M2.00.008
+- **Printer Firmware:** B1.17 (same version used in production / in the field)
 - **Printer Config:** `TSC_Alpha_40L_Configuration.dcf`
 - **Connection:** Bluetooth Classic
